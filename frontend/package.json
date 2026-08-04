@@ -1,3 +1,4 @@
+cd frontend && npm run dev
 {
   "name": "pastoral-app-frontend",
   "private": true,
@@ -38,4 +39,4 @@
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0"
   }
-}
+} 

@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  firstName String?
+  lastName  String?
+  role      String    @default("visitador") // admin, visitador
+  churchId  Int
+  church    Church    @relation(fields: [churchId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  contacts  Contact[]
+  visits    VisitSchedule[]
+  sermons   PreachingSchedule[]
+
+  @@map("users")
+}
+
+model Church {
+  id       Int       @id @default(autoincrement())
+  name     String
+  location String?
+  members  Member[]
+  users    User[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("churches")
+}
+
+model Member {
+  id            Int       @id @default(autoincrement())
+  name          String
+  phone         String?
+  email         String?
+  status        String?   // espiritual, visitante, inactivo, etc
+  lastContact   DateTime?
+  notes         String?
+  churchId      Int
+  church        Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  families      Family[]
+  needs         Need[]
+  contacts      Contact[]
+  visits        VisitSchedule[]
+
+  @@map("members")
+}
+
+model Family {
+  id        Int       @id @default(autoincrement())
+  memberId  Int
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  relation  String?   // esposa, hijo, etc
+  name      String
+  dob       DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("families")
+}
+
+model Need {
+  id        Int       @id @default(autoincrement())
+  memberId  Int
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  description String
+  priority  String?   // baja, media, alta
+  resolved  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("needs")
+}
+
+model Contact {
+  id        Int       @id @default(autoincrement())
+  memberId  Int
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  type      String    // visita, llamada, mensaje
+  date      DateTime
+  notes     String?
+  contactBy Int
+  user      User      @relation(fields: [contactBy], references: [id])
+  viaSms    Boolean   @default(false)
+  viaEmail  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("contacts")
+}
+
+model VisitSchedule {
+  id            Int       @id @default(autoincrement())
+  memberId      Int
+  member        Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  scheduledDate DateTime
+  status        String    @default("pendiente") // pendiente, completada, cancelada
+  notes         String?
+  assignedTo    Int
+  user          User      @relation(fields: [assignedTo], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("visit_schedule")
+}
+
+model PreachingSchedule {
+  id        Int       @id @default(autoincrement())
+  date      DateTime
+  title     String
+  location  String?
+  assignedTo Int
+  user      User      @relation(fields: [assignedTo], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("preaching_schedule")
+}

@@ -1,4 +1,3 @@
-cd frontend && npm run dev
 {
   "name": "pastoral-app-frontend",
   "private": true,

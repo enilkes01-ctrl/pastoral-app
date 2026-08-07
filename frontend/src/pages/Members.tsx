@@ -208,6 +208,7 @@ export default function Members() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Estatus</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Iglesia</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Último Contacto</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -220,6 +221,14 @@ export default function Members() {
                       <td className="px-6 py-4 text-sm text-gray-600">{m.church?.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {m.lastContact ? new Date(m.lastContact).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <button
+                          onClick={() => navigate(`/visits?memberId=${m.id}`)}
+                          className="text-blue-600 hover:underline"
+                        >
+                          Agendar visita
+                        </button>
                       </td>
                     </tr>
                   ))}

@@ -42,7 +42,10 @@ export default function Dashboard() {
               >
                 Ver Miembros
               </button>
-              <button className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded">
+              <button
+                onClick={() => navigate('/visits')}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+              >
                 Agendar Visita
               </button>
               <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded">

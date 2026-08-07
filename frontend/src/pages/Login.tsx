@@ -19,7 +19,7 @@ export default function Login() {
       await login(email, password)
       navigate('/dashboard')
     } catch (err: any) {
-      setError(err.message || 'Login failed')
+      setError(err.response?.data?.error || 'Error al iniciar sesión')
     } finally {
       setLoading(false)
     }

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import apiClient from './api'
 
 interface AuthStore {
   token: string | null
@@ -16,22 +17,10 @@ export const useStore = create<AuthStore>((set) => ({
   isAuthenticated: !!localStorage.getItem('token'),
 
   login: async (email: string, password: string) => {
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await response.json()
-      if (data.token) {
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        set({ token: data.token, user: data.user, isAuthenticated: true })
-      }
-    } catch (error) {
-      console.error('Login failed:', error)
-      throw error
-    }
+    const { data } = await apiClient.post('/api/auth/login', { email, password })
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
+    set({ token: data.token, user: data.user, isAuthenticated: true })
   },
 
   logout: () => {

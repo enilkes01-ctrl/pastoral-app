@@ -5,9 +5,17 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 const router = Router();
 router.use(requireAuth);
 
-// Admin ve todas las iglesias; visitador solo la suya
+// Admin ve todas las iglesias; visitador solo las que tiene asignadas
 function churchFilter(req: AuthRequest) {
-  return req.user!.role === 'admin' ? {} : { churchId: req.user!.churchId };
+  return req.user!.role === 'admin' ? {} : { churchId: { in: req.user!.churchIds } };
+}
+
+// Determina a qué iglesia debe asignarse un nuevo registro, validando acceso
+function resolveTargetChurchId(req: AuthRequest, providedChurchId?: number): number | null {
+  if (req.user!.role === 'admin') return providedChurchId || null;
+  if (req.user!.churchIds.length === 1) return req.user!.churchIds[0];
+  if (providedChurchId && req.user!.churchIds.includes(providedChurchId)) return providedChurchId;
+  return null;
 }
 
 router.get('/', async (req: AuthRequest, res) => {
@@ -48,7 +56,7 @@ router.post('/', async (req: AuthRequest, res) => {
 
   if (!name) return res.status(400).json({ error: 'El nombre es requerido' });
 
-  const targetChurchId = req.user!.role === 'admin' ? churchId : req.user!.churchId;
+  const targetChurchId = resolveTargetChurchId(req, churchId ? Number(churchId) : undefined);
   if (!targetChurchId) return res.status(400).json({ error: 'La iglesia es requerida' });
 
   const member = await prisma.member.create({

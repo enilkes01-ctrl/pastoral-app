@@ -11,19 +11,20 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  firstName String?
-  lastName  String?
-  role      String    @default("visitador") // admin, visitador
-  churchId  Int
-  church    Church    @relation(fields: [churchId], references: [id])
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  contacts  Contact[]
-  visits    VisitSchedule[]
-  sermons   PreachingSchedule[]
+  id             Int       @id @default(autoincrement())
+  email          String    @unique
+  password       String
+  firstName      String?
+  lastName       String?
+  role           String    @default("visitador") // admin, visitador
+  churchId       Int
+  church         Church    @relation("UserHomeChurch", fields: [churchId], references: [id])
+  accessChurches Church[]  @relation("UserChurchAccess")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  contacts       Contact[]
+  visits         VisitSchedule[]
+  sermons        PreachingSchedule[]
 
   @@map("users")
 }
@@ -33,7 +34,8 @@ model Church {
   name     String
   location String?
   members  Member[]
-  users    User[]
+  users    User[]    @relation("UserHomeChurch")
+  usersWithAccess User[] @relation("UserChurchAccess")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

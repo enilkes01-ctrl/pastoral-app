@@ -6,7 +6,7 @@ const router = Router();
 router.use(requireAuth);
 
 function churchFilter(req: AuthRequest) {
-  return req.user!.role === 'admin' ? {} : { churchId: req.user!.churchId };
+  return req.user!.role === 'admin' ? {} : { churchId: { in: req.user!.churchIds } };
 }
 
 // Agenda de visitas (todas las de la iglesia del usuario, o todas si es admin)

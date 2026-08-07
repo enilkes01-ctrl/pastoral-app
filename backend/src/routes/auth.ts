@@ -13,7 +13,10 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email y contraseña son requeridos' });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { accessChurches: true },
+  });
   if (!user) {
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
@@ -23,8 +26,10 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
 
+  const churchIds = [user.churchId, ...user.accessChurches.map((c) => c.id)];
+
   const token = jwt.sign(
-    { id: user.id, role: user.role, churchId: user.churchId },
+    { id: user.id, role: user.role, churchIds },
     process.env.JWT_SECRET!,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
   );
@@ -38,13 +43,14 @@ router.post('/login', async (req, res) => {
       lastName: user.lastName,
       role: user.role,
       churchId: user.churchId,
+      churchIds,
     },
   });
 });
 
 // Solo un admin puede crear nuevos usuarios (visitadores/asociados)
 router.post('/register', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  const { email, password, firstName, lastName, role, churchId } = req.body;
+  const { email, password, firstName, lastName, role, churchId, additionalChurchIds } = req.body;
 
   if (!email || !password || !churchId) {
     return res.status(400).json({ error: 'Email, contraseña e iglesia son requeridos' });
@@ -65,7 +71,11 @@ router.post('/register', requireAuth, requireAdmin, async (req: AuthRequest, res
       lastName,
       role: role || 'visitador',
       churchId,
+      accessChurches: additionalChurchIds?.length
+        ? { connect: additionalChurchIds.map((id: number) => ({ id })) }
+        : undefined,
     },
+    include: { accessChurches: true },
   });
 
   res.status(201).json({
@@ -75,6 +85,7 @@ router.post('/register', requireAuth, requireAdmin, async (req: AuthRequest, res
     lastName: user.lastName,
     role: user.role,
     churchId: user.churchId,
+    accessChurches: user.accessChurches,
   });
 });
 
@@ -89,6 +100,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
       role: true,
       churchId: true,
       church: { select: { name: true } },
+      accessChurches: { select: { id: true, name: true } },
     },
   });
   res.json(user);

@@ -20,7 +20,6 @@ interface Member {
 }
 
 export default function Members() {
-  const user = useStore((state) => state.user)
   const logout = useStore((state) => state.logout)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -41,13 +40,13 @@ export default function Members() {
   const { data: churches } = useQuery<Church[]>({
     queryKey: ['churches'],
     queryFn: async () => (await apiClient.get('/api/churches')).data,
-    enabled: user?.role === 'admin',
   })
+  const needsChurchPicker = (churches?.length ?? 0) > 1
 
   const createMember = useMutation({
     mutationFn: async () => {
       const payload: Record<string, unknown> = { name, phone, email, status }
-      if (user?.role === 'admin') payload.churchId = Number(churchId)
+      if (needsChurchPicker) payload.churchId = Number(churchId)
       return (await apiClient.post('/api/members', payload)).data
     },
     onSuccess: () => {
@@ -76,7 +75,7 @@ export default function Members() {
       setError('El nombre es requerido')
       return
     }
-    if (user?.role === 'admin' && !churchId) {
+    if (needsChurchPicker && !churchId) {
       setError('Selecciona una iglesia')
       return
     }
@@ -145,7 +144,7 @@ export default function Members() {
                   <option value="visitante">Visitante</option>
                   <option value="interesado">Interesado</option>
                 </select>
-                {user?.role === 'admin' && (
+                {needsChurchPicker && (
                   <select
                     value={churchId}
                     onChange={(e) => setChurchId(e.target.value)}

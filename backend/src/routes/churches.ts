@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/', requireAuth, async (_req, res) => {
-  const churches = await prisma.church.findMany({ orderBy: { name: 'asc' } });
+// Admin ve todas las iglesias; el resto ve solo las que tiene asignadas
+router.get('/', requireAuth, async (req: AuthRequest, res) => {
+  const churches = await prisma.church.findMany({
+    where: req.user!.role === 'admin' ? {} : { id: { in: req.user!.churchIds } },
+    orderBy: { name: 'asc' },
+  });
   res.json(churches);
 });
 

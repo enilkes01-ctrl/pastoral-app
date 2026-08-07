@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+// En vacío usa rutas relativas (/api/...), que el proxy de Vite redirige al backend.
+// Esto funciona igual desde localhost o desde el celular en la misma red WiFi.
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const apiClient = axios.create({
   baseURL: API_URL,

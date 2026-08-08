@@ -48,7 +48,10 @@ export default function Dashboard() {
               >
                 Agendar Visita
               </button>
-              <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded">
+              <button
+                onClick={() => navigate('/contacts')}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded"
+              >
                 Registrar Contacto
               </button>
             </div>

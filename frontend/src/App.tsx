@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Members from './pages/Members'
 import Visits from './pages/Visits'
+import Contacts from './pages/Contacts'
 import ProtectedRoute from './components/ProtectedRoute'
 
 const queryClient = new QueryClient()
@@ -20,6 +21,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/members" element={<Members />} />
             <Route path="/visits" element={<Visits />} />
+            <Route path="/contacts" element={<Contacts />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

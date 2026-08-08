@@ -222,12 +222,18 @@ export default function Members() {
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {m.lastContact ? new Date(m.lastContact).toLocaleDateString() : '-'}
                       </td>
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-6 py-4 text-sm space-x-2">
                         <button
                           onClick={() => navigate(`/visits?memberId=${m.id}`)}
                           className="text-blue-600 hover:underline"
                         >
                           Agendar visita
+                        </button>
+                        <button
+                          onClick={() => navigate(`/contacts?memberId=${m.id}`)}
+                          className="text-purple-600 hover:underline"
+                        >
+                          Registrar contacto
                         </button>
                       </td>
                     </tr>

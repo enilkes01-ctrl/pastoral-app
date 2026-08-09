@@ -110,6 +110,7 @@ model VisitSchedule {
   id            Int       @id @default(autoincrement())
   memberId      Int
   member        Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  type          String    @default("visita") // visita, llamada, mensaje
   scheduledDate DateTime
   status        String    @default("pendiente") // pendiente, completada, cancelada
   notes         String?

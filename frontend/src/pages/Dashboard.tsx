@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useStore } from '../store'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -9,6 +10,7 @@ interface Member {
 
 interface Visit {
   id: number
+  type: string
   status: string
   scheduledDate: string
   member: { name: string }
@@ -27,10 +29,17 @@ const CONTACT_TYPE_LABEL: Record<string, string> = {
   mensaje: 'Mensaje',
 }
 
+const TYPE_LABEL_PLURAL: Record<string, [string, string]> = {
+  visita: ['visita', 'visitas'],
+  llamada: ['llamada', 'llamadas'],
+  mensaje: ['mensaje', 'mensajes'],
+}
+
 export default function Dashboard() {
   const user = useStore((state) => state.user)
   const logout = useStore((state) => state.logout)
   const navigate = useNavigate()
+  const [bannerDismissed, setBannerDismissed] = useState(false)
 
   const { data: members } = useQuery<Member[]>({
     queryKey: ['members'],
@@ -64,6 +73,23 @@ export default function Dashboard() {
 
   const ultimaActividad = activities[0]
 
+  // Pendientes para hoy o vencidos (fecha ya pasó y sigue en estatus "pendiente")
+  const now = new Date()
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+  const pendingDue = (visits || []).filter(
+    (v) => v.status === 'pendiente' && new Date(v.scheduledDate) <= endOfToday
+  )
+  const pendingCounts = pendingDue.reduce((acc: Record<string, number>, v) => {
+    acc[v.type] = (acc[v.type] || 0) + 1
+    return acc
+  }, {})
+  const pendingSummary = Object.entries(pendingCounts)
+    .map(([type, count]) => {
+      const [singular, plural] = TYPE_LABEL_PLURAL[type] || [type, type]
+      return `${count} ${count === 1 ? singular : plural}`
+    })
+    .join(', ')
+
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -89,6 +115,24 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {!bannerDismissed && pendingDue.length > 0 && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-300 rounded-lg px-4 py-3 flex items-center justify-between">
+            <p className="text-sm text-yellow-800">
+              📌 Tienes pendiente: <span className="font-semibold">{pendingSummary}</span> para hoy o antes.{' '}
+              <button onClick={() => navigate('/visits')} className="underline font-medium">
+                Ver agenda
+              </button>
+            </p>
+            <button
+              onClick={() => setBannerDismissed(true)}
+              className="text-yellow-700 hover:text-yellow-900 ml-4"
+              aria-label="Cerrar aviso"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow p-6">
@@ -104,7 +148,7 @@ export default function Dashboard() {
                 onClick={() => navigate('/visits')}
                 className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
               >
-                Agendar Visita
+                Agenda
               </button>
               <button
                 onClick={() => navigate('/contacts')}

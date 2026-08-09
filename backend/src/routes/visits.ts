@@ -22,11 +22,16 @@ router.get('/', async (req: AuthRequest, res) => {
   res.json(visits);
 });
 
+const VALID_TYPES = ['visita', 'llamada', 'mensaje'];
+
 router.post('/', async (req: AuthRequest, res) => {
-  const { memberId, scheduledDate, notes, assignedTo } = req.body;
+  const { memberId, type, scheduledDate, notes, assignedTo } = req.body;
 
   if (!memberId || !scheduledDate) {
     return res.status(400).json({ error: 'Miembro y fecha son requeridos' });
+  }
+  if (type && !VALID_TYPES.includes(type)) {
+    return res.status(400).json({ error: 'Tipo inválido' });
   }
 
   const member = await prisma.member.findFirst({
@@ -37,6 +42,7 @@ router.post('/', async (req: AuthRequest, res) => {
   const visit = await prisma.visitSchedule.create({
     data: {
       memberId: member.id,
+      type: type || 'visita',
       scheduledDate: new Date(scheduledDate),
       notes,
       assignedTo: assignedTo || req.user!.id,

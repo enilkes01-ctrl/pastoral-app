@@ -11,6 +11,7 @@ interface Member {
 
 interface Visit {
   id: number
+  type: string
   scheduledDate: string
   status: string
   notes: string | null
@@ -30,6 +31,18 @@ const STATUS_COLOR: Record<string, string> = {
   cancelada: 'bg-red-100 text-red-800',
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  visita: 'Visita',
+  llamada: 'Llamada',
+  mensaje: 'Mensaje',
+}
+
+const TYPE_COLOR: Record<string, string> = {
+  visita: 'bg-blue-100 text-blue-800',
+  llamada: 'bg-purple-100 text-purple-800',
+  mensaje: 'bg-teal-100 text-teal-800',
+}
+
 export default function Visits() {
   const logout = useStore((state) => state.logout)
   const navigate = useNavigate()
@@ -38,6 +51,7 @@ export default function Visits() {
 
   const [showForm, setShowForm] = useState(!!searchParams.get('memberId'))
   const [memberId, setMemberId] = useState(searchParams.get('memberId') || '')
+  const [type, setType] = useState('visita')
   const [scheduledDate, setScheduledDate] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
@@ -54,17 +68,18 @@ export default function Visits() {
 
   const createVisit = useMutation({
     mutationFn: async () =>
-      (await apiClient.post('/api/visits', { memberId: Number(memberId), scheduledDate, notes })).data,
+      (await apiClient.post('/api/visits', { memberId: Number(memberId), type, scheduledDate, notes })).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visits'] })
       setShowForm(false)
       setMemberId('')
+      setType('visita')
       setScheduledDate('')
       setNotes('')
       setError('')
     },
     onError: (err: any) => {
-      setError(err.response?.data?.error || 'Error al agendar la visita')
+      setError(err.response?.data?.error || 'Error al agendar')
     },
   })
 
@@ -104,7 +119,7 @@ export default function Visits() {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Agenda de Visitas</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Agenda</h1>
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate('/dashboard')}
@@ -125,7 +140,7 @@ export default function Visits() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {showForm && (
           <div className="bg-white rounded-lg shadow mb-6 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Nueva Visita</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Nuevo Pendiente</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -141,6 +156,15 @@ export default function Visits() {
                       {m.name}
                     </option>
                   ))}
+                </select>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  className="border border-gray-300 rounded px-3 py-2"
+                >
+                  <option value="visita">Visita</option>
+                  <option value="llamada">Llamada</option>
+                  <option value="mensaje">Mensaje</option>
                 </select>
                 <input
                   type="datetime-local"
@@ -179,13 +203,13 @@ export default function Visits() {
 
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Próximas Visitas</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Próximos Pendientes</h2>
             {!showForm && (
               <button
                 onClick={() => setShowForm(true)}
                 className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
               >
-                + Agendar Visita
+                + Agendar
               </button>
             )}
           </div>
@@ -194,7 +218,7 @@ export default function Visits() {
             <div className="px-6 py-12 text-center text-gray-500">Cargando...</div>
           ) : sortedVisits.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <p className="text-gray-500">No hay visitas agendadas aún.</p>
+              <p className="text-gray-500">No hay nada agendado aún.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -202,6 +226,7 @@ export default function Visits() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Miembro</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Tipo</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Fecha</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Asignado a</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Estatus</th>
@@ -213,6 +238,11 @@ export default function Visits() {
                   {sortedVisits.map((v) => (
                     <tr key={v.id}>
                       <td className="px-6 py-4 text-sm text-gray-900">{v.member?.name}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${TYPE_COLOR[v.type] || TYPE_COLOR.visita}`}>
+                          {TYPE_LABEL[v.type] || v.type}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {new Date(v.scheduledDate).toLocaleString()}
                       </td>

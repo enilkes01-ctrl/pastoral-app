@@ -16,6 +16,7 @@ interface Member {
   email: string | null
   status: string | null
   lastContact: string | null
+  churchId: number
   church: { name: string }
 }
 
@@ -31,6 +32,7 @@ export default function Members() {
   const [status, setStatus] = useState('')
   const [churchId, setChurchId] = useState('')
   const [error, setError] = useState('')
+  const [filterChurchId, setFilterChurchId] = useState('')
 
   const { data: members, isLoading } = useQuery<Member[]>({
     queryKey: ['members'],
@@ -42,6 +44,17 @@ export default function Members() {
     queryFn: async () => (await apiClient.get('/api/churches')).data,
   })
   const needsChurchPicker = (churches?.length ?? 0) > 1
+
+  const filteredMembers = (members || [])
+    .filter((m) => !filterChurchId || m.churchId === Number(filterChurchId))
+    .slice()
+    .sort((a, b) => {
+      if (!filterChurchId) {
+        const churchCompare = a.church.name.localeCompare(b.church.name)
+        if (churchCompare !== 0) return churchCompare
+      }
+      return a.name.localeCompare(b.name)
+    })
 
   const createMember = useMutation({
     mutationFn: async () => {
@@ -181,21 +194,39 @@ export default function Members() {
         )}
 
         <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-wrap gap-3">
             <h2 className="text-lg font-semibold text-gray-900">Lista de Miembros</h2>
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
-            >
-              + Nuevo Miembro
-            </button>
+            <div className="flex items-center space-x-3">
+              {needsChurchPicker && (
+                <select
+                  value={filterChurchId}
+                  onChange={(e) => setFilterChurchId(e.target.value)}
+                  className="border border-gray-300 rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Todas las iglesias</option>
+                  {churches?.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+              >
+                + Nuevo Miembro
+              </button>
+            </div>
           </div>
 
           {isLoading ? (
             <div className="px-6 py-12 text-center text-gray-500">Cargando...</div>
-          ) : !members || members.length === 0 ? (
+          ) : filteredMembers.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <p className="text-gray-500">No hay miembros registrados aún.</p>
+              <p className="text-gray-500">
+                {filterChurchId ? 'No hay miembros en esta iglesia.' : 'No hay miembros registrados aún.'}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -212,7 +243,7 @@ export default function Members() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {members.map((m) => (
+                  {filteredMembers.map((m) => (
                     <tr key={m.id}>
                       <td className="px-6 py-4 text-sm text-gray-900">{m.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{m.phone || '-'}</td>

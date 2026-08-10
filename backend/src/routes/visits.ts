@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 router.use(requireAuth);
@@ -9,8 +10,8 @@ function churchFilter(req: AuthRequest) {
   return req.user!.role === 'admin' ? {} : { churchId: { in: req.user!.churchIds } };
 }
 
-// Agenda de visitas (todas las de la iglesia del usuario, o todas si es admin)
-router.get('/', async (req: AuthRequest, res) => {
+// Agenda (visitas, llamadas o mensajes) de todas las iglesias accesibles
+router.get('/', asyncHandler(async (req: AuthRequest, res) => {
   const visits = await prisma.visitSchedule.findMany({
     where: { member: churchFilter(req) },
     include: {
@@ -20,11 +21,11 @@ router.get('/', async (req: AuthRequest, res) => {
     orderBy: { scheduledDate: 'asc' },
   });
   res.json(visits);
-});
+}));
 
 const VALID_TYPES = ['visita', 'llamada', 'mensaje'];
 
-router.post('/', async (req: AuthRequest, res) => {
+router.post('/', asyncHandler(async (req: AuthRequest, res) => {
   const { memberId, type, scheduledDate, notes, assignedTo } = req.body;
 
   if (!memberId || !scheduledDate) {
@@ -50,9 +51,9 @@ router.post('/', async (req: AuthRequest, res) => {
   });
 
   res.status(201).json(visit);
-});
+}));
 
-router.put('/:id', async (req: AuthRequest, res) => {
+router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
   const visit = await prisma.visitSchedule.findFirst({
     where: { id: Number(req.params.id), member: churchFilter(req) },
   });
@@ -69,9 +70,9 @@ router.put('/:id', async (req: AuthRequest, res) => {
   });
 
   res.json(updated);
-});
+}));
 
-router.delete('/:id', async (req: AuthRequest, res) => {
+router.delete('/:id', asyncHandler(async (req: AuthRequest, res) => {
   const visit = await prisma.visitSchedule.findFirst({
     where: { id: Number(req.params.id), member: churchFilter(req) },
   });
@@ -79,6 +80,6 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
   await prisma.visitSchedule.delete({ where: { id: visit.id } });
   res.status(204).send();
-});
+}));
 
 export default router;

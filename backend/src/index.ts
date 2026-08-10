@@ -7,6 +7,15 @@ import contactRoutes from './routes/contacts';
 import visitRoutes from './routes/visits';
 import churchRoutes from './routes/churches';
 
+// Última defensa: si algo se escapa sin manejar (ej. un rechazo de promesa
+// fuera de una ruta), registrar y seguir vivo en vez de tumbar el servidor.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+});
+
 dotenv.config();
 
 const app = express();
@@ -25,6 +34,14 @@ app.use('/api/members', memberRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/churches', churchRoutes);
+
+// Manejador de errores: cualquier error de una ruta (ej. la base de datos no
+// respondió) termina aquí como un 500 normal, en vez de tumbar el servidor.
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: 'Error interno del servidor. Intenta de nuevo en unos segundos.' });
+});
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);

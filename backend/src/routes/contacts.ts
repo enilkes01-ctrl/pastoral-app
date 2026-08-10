@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 router.use(requireAuth);
@@ -10,7 +11,7 @@ function churchFilter(req: AuthRequest) {
 }
 
 // Historial de contactos de todas las iglesias accesibles (más recientes primero)
-router.get('/', async (req: AuthRequest, res) => {
+router.get('/', asyncHandler(async (req: AuthRequest, res) => {
   const contacts = await prisma.contact.findMany({
     where: { member: churchFilter(req) },
     include: {
@@ -20,10 +21,10 @@ router.get('/', async (req: AuthRequest, res) => {
     orderBy: { date: 'desc' },
   });
   res.json(contacts);
-});
+}));
 
 // Historial de contactos de un miembro
-router.get('/member/:memberId', async (req: AuthRequest, res) => {
+router.get('/member/:memberId', asyncHandler(async (req: AuthRequest, res) => {
   const member = await prisma.member.findFirst({
     where: { id: Number(req.params.memberId), ...churchFilter(req) },
   });
@@ -35,9 +36,9 @@ router.get('/member/:memberId', async (req: AuthRequest, res) => {
     orderBy: { date: 'desc' },
   });
   res.json(contacts);
-});
+}));
 
-router.post('/', async (req: AuthRequest, res) => {
+router.post('/', asyncHandler(async (req: AuthRequest, res) => {
   const { memberId, type, date, notes, viaSms, viaEmail } = req.body;
 
   if (!memberId || !type || !date) {
@@ -67,6 +68,38 @@ router.post('/', async (req: AuthRequest, res) => {
   });
 
   res.status(201).json(contact);
-});
+}));
+
+router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
+  const existing = await prisma.contact.findFirst({
+    where: { id: Number(req.params.id), member: churchFilter(req) },
+  });
+  if (!existing) return res.status(404).json({ error: 'Contacto no encontrado' });
+
+  const { type, date, notes, viaSms, viaEmail } = req.body;
+
+  const contact = await prisma.contact.update({
+    where: { id: existing.id },
+    data: {
+      type,
+      date: date ? new Date(date) : undefined,
+      notes,
+      viaSms: viaSms !== undefined ? !!viaSms : undefined,
+      viaEmail: viaEmail !== undefined ? !!viaEmail : undefined,
+    },
+  });
+
+  // Recalcular el último contacto del miembro por si se editó la fecha
+  const latest = await prisma.contact.findFirst({
+    where: { memberId: existing.memberId },
+    orderBy: { date: 'desc' },
+  });
+  await prisma.member.update({
+    where: { id: existing.memberId },
+    data: { lastContact: latest?.date ?? null },
+  });
+
+  res.json(contact);
+}));
 
 export default router;

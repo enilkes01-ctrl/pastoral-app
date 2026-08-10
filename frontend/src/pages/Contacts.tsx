@@ -11,6 +11,7 @@ interface Member {
 
 interface Contact {
   id: number
+  memberId: number
   type: string
   date: string
   notes: string | null
@@ -39,6 +40,7 @@ export default function Contacts() {
   const [searchParams] = useSearchParams()
 
   const [showForm, setShowForm] = useState(!!searchParams.get('memberId'))
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [memberId, setMemberId] = useState(searchParams.get('memberId') || '')
   const [type, setType] = useState('')
   const [date, setDate] = useState('')
@@ -46,6 +48,37 @@ export default function Contacts() {
   const [viaSms, setViaSms] = useState(false)
   const [viaEmail, setViaEmail] = useState(false)
   const [error, setError] = useState('')
+
+  const resetForm = () => {
+    setShowForm(false)
+    setEditingId(null)
+    setMemberId('')
+    setType('')
+    setDate('')
+    setNotes('')
+    setViaSms(false)
+    setViaEmail(false)
+    setError('')
+  }
+
+  // datetime-local necesita "YYYY-MM-DDTHH:mm" en hora local, sin segundos ni zona
+  const toDatetimeLocal = (isoDate: string) => {
+    const d = new Date(isoDate)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  const startEdit = (c: Contact) => {
+    setEditingId(c.id)
+    setMemberId(String(c.memberId))
+    setType(c.type)
+    setDate(toDatetimeLocal(c.date))
+    setNotes(c.notes || '')
+    setViaSms(c.viaSms)
+    setViaEmail(c.viaEmail)
+    setError('')
+    setShowForm(true)
+  }
 
   const { data: contacts, isLoading } = useQuery<Contact[]>({
     queryKey: ['contacts'],
@@ -72,17 +105,31 @@ export default function Contacts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] })
       queryClient.invalidateQueries({ queryKey: ['members'] })
-      setShowForm(false)
-      setMemberId('')
-      setType('')
-      setDate('')
-      setNotes('')
-      setViaSms(false)
-      setViaEmail(false)
-      setError('')
+      resetForm()
     },
     onError: (err: any) => {
       setError(err.response?.data?.error || 'Error al registrar el contacto')
+    },
+  })
+
+  const updateContact = useMutation({
+    mutationFn: async () =>
+      (
+        await apiClient.put(`/api/contacts/${editingId}`, {
+          type,
+          date,
+          notes,
+          viaSms,
+          viaEmail,
+        })
+      ).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] })
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+      resetForm()
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error || 'Error al actualizar el contacto')
     },
   })
 
@@ -105,7 +152,11 @@ export default function Contacts() {
       setError('Selecciona una fecha')
       return
     }
-    createContact.mutate()
+    if (editingId) {
+      updateContact.mutate()
+    } else {
+      createContact.mutate()
+    }
   }
 
   return (
@@ -133,7 +184,9 @@ export default function Contacts() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {showForm && (
           <div className="bg-white rounded-lg shadow mb-6 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Nuevo Contacto</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {editingId ? 'Editar Contacto' : 'Nuevo Contacto'}
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -141,7 +194,8 @@ export default function Contacts() {
                 <select
                   value={memberId}
                   onChange={(e) => setMemberId(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2"
+                  disabled={!!editingId}
+                  className="border border-gray-300 rounded px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
                 >
                   <option value="">Selecciona miembro *...</option>
                   {members?.map((m) => (
@@ -187,14 +241,14 @@ export default function Contacts() {
               <div className="flex space-x-2">
                 <button
                   type="submit"
-                  disabled={createContact.isPending}
+                  disabled={createContact.isPending || updateContact.isPending}
                   className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded disabled:opacity-50"
                 >
-                  {createContact.isPending ? 'Guardando...' : 'Guardar'}
+                  {createContact.isPending || updateContact.isPending ? 'Guardando...' : 'Guardar'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={resetForm}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
                 >
                   Cancelar
@@ -233,6 +287,7 @@ export default function Contacts() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Fecha</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Registrado por</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Notas</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -253,6 +308,11 @@ export default function Contacts() {
                         {c.user?.firstName} {c.user?.lastName}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">{c.notes || '-'}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <button onClick={() => startEdit(c)} className="text-blue-600 hover:underline">
+                          Editar
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

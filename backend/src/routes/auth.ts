@@ -3,10 +3,11 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
-router.post('/login', async (req, res) => {
+router.post('/login', asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -46,10 +47,10 @@ router.post('/login', async (req, res) => {
       churchIds,
     },
   });
-});
+}));
 
 // Solo un admin puede crear nuevos usuarios (visitadores/asociados)
-router.post('/register', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/register', requireAuth, requireAdmin, asyncHandler(async (req: AuthRequest, res) => {
   const { email, password, firstName, lastName, role, churchId, additionalChurchIds } = req.body;
 
   if (!email || !password || !churchId) {
@@ -87,9 +88,9 @@ router.post('/register', requireAuth, requireAdmin, async (req: AuthRequest, res
     churchId: user.churchId,
     accessChurches: user.accessChurches,
   });
-});
+}));
 
-router.get('/me', requireAuth, async (req: AuthRequest, res) => {
+router.get('/me', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.id },
     select: {
@@ -104,6 +105,6 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
     },
   });
   res.json(user);
-});
+}));
 
 export default router;

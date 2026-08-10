@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 router.use(requireAuth);
@@ -18,7 +19,7 @@ function resolveTargetChurchId(req: AuthRequest, providedChurchId?: number): num
   return null;
 }
 
-router.get('/', async (req: AuthRequest, res) => {
+router.get('/', asyncHandler(async (req: AuthRequest, res) => {
   const { search } = req.query;
 
   const members = await prisma.member.findMany({
@@ -33,9 +34,9 @@ router.get('/', async (req: AuthRequest, res) => {
   });
 
   res.json(members);
-});
+}));
 
-router.get('/:id', async (req: AuthRequest, res) => {
+router.get('/:id', asyncHandler(async (req: AuthRequest, res) => {
   const member = await prisma.member.findFirst({
     where: { id: Number(req.params.id), ...churchFilter(req) },
     include: {
@@ -49,9 +50,9 @@ router.get('/:id', async (req: AuthRequest, res) => {
 
   if (!member) return res.status(404).json({ error: 'Miembro no encontrado' });
   res.json(member);
-});
+}));
 
-router.post('/', async (req: AuthRequest, res) => {
+router.post('/', asyncHandler(async (req: AuthRequest, res) => {
   const { name, phone, email, status, notes, churchId } = req.body;
 
   if (!name) return res.status(400).json({ error: 'El nombre es requerido' });
@@ -64,9 +65,9 @@ router.post('/', async (req: AuthRequest, res) => {
   });
 
   res.status(201).json(member);
-});
+}));
 
-router.put('/:id', async (req: AuthRequest, res) => {
+router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
   const existing = await prisma.member.findFirst({
     where: { id: Number(req.params.id), ...churchFilter(req) },
   });
@@ -79,9 +80,9 @@ router.put('/:id', async (req: AuthRequest, res) => {
   });
 
   res.json(member);
-});
+}));
 
-router.delete('/:id', async (req: AuthRequest, res) => {
+router.delete('/:id', asyncHandler(async (req: AuthRequest, res) => {
   const existing = await prisma.member.findFirst({
     where: { id: Number(req.params.id), ...churchFilter(req) },
   });
@@ -89,10 +90,10 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
   await prisma.member.delete({ where: { id: existing.id } });
   res.status(204).send();
-});
+}));
 
 // Familia
-router.post('/:id/families', async (req: AuthRequest, res) => {
+router.post('/:id/families', asyncHandler(async (req: AuthRequest, res) => {
   const member = await prisma.member.findFirst({
     where: { id: Number(req.params.id), ...churchFilter(req) },
   });
@@ -103,10 +104,10 @@ router.post('/:id/families', async (req: AuthRequest, res) => {
     data: { memberId: member.id, name, relation, dob: dob ? new Date(dob) : null },
   });
   res.status(201).json(family);
-});
+}));
 
 // Necesidades
-router.post('/:id/needs', async (req: AuthRequest, res) => {
+router.post('/:id/needs', asyncHandler(async (req: AuthRequest, res) => {
   const member = await prisma.member.findFirst({
     where: { id: Number(req.params.id), ...churchFilter(req) },
   });
@@ -119,9 +120,9 @@ router.post('/:id/needs', async (req: AuthRequest, res) => {
     data: { memberId: member.id, description, priority },
   });
   res.status(201).json(need);
-});
+}));
 
-router.put('/:id/needs/:needId', async (req: AuthRequest, res) => {
+router.put('/:id/needs/:needId', asyncHandler(async (req: AuthRequest, res) => {
   const member = await prisma.member.findFirst({
     where: { id: Number(req.params.id), ...churchFilter(req) },
   });
@@ -132,6 +133,6 @@ router.put('/:id/needs/:needId', async (req: AuthRequest, res) => {
     data: { resolved: req.body.resolved },
   });
   res.json(need);
-});
+}));
 
 export default router;

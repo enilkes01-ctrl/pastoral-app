@@ -102,4 +102,25 @@ router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
   res.json(contact);
 }));
 
+router.delete('/:id', asyncHandler(async (req: AuthRequest, res) => {
+  const existing = await prisma.contact.findFirst({
+    where: { id: Number(req.params.id), member: churchFilter(req) },
+  });
+  if (!existing) return res.status(404).json({ error: 'Contacto no encontrado' });
+
+  await prisma.contact.delete({ where: { id: existing.id } });
+
+  // Recalcular el último contacto del miembro por si se borró el más reciente
+  const latest = await prisma.contact.findFirst({
+    where: { memberId: existing.memberId },
+    orderBy: { date: 'desc' },
+  });
+  await prisma.member.update({
+    where: { id: existing.memberId },
+    data: { lastContact: latest?.date ?? null },
+  });
+
+  res.status(204).send();
+}));
+
 export default router;

@@ -49,6 +49,7 @@ model Member {
   email         String?
   status        String?   // espiritual, visitante, inactivo, etc
   lastContact   DateTime?
+  lastVisit     DateTime?
   notes         String?
   churchId      Int
   church        Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)

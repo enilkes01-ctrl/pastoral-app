@@ -25,6 +25,18 @@ router.get('/', asyncHandler(async (req: AuthRequest, res) => {
 
 const VALID_TYPES = ['visita', 'llamada', 'mensaje'];
 
+// Recalcula la fecha de la última visita completada de un miembro
+async function recalcLastVisit(memberId: number) {
+  const latest = await prisma.visitSchedule.findFirst({
+    where: { memberId, type: 'visita', status: 'completada' },
+    orderBy: { scheduledDate: 'desc' },
+  });
+  await prisma.member.update({
+    where: { id: memberId },
+    data: { lastVisit: latest?.scheduledDate ?? null },
+  });
+}
+
 router.post('/', asyncHandler(async (req: AuthRequest, res) => {
   const { memberId, type, scheduledDate, notes, assignedTo } = req.body;
 
@@ -69,6 +81,8 @@ router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
     },
   });
 
+  if (updated.type === 'visita') await recalcLastVisit(updated.memberId);
+
   res.json(updated);
 }));
 
@@ -79,6 +93,9 @@ router.delete('/:id', asyncHandler(async (req: AuthRequest, res) => {
   if (!visit) return res.status(404).json({ error: 'Visita no encontrada' });
 
   await prisma.visitSchedule.delete({ where: { id: visit.id } });
+
+  if (visit.type === 'visita') await recalcLastVisit(visit.memberId);
+
   res.status(204).send();
 }));
 

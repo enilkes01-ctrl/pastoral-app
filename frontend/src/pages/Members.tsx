@@ -16,6 +16,7 @@ interface Member {
   email: string | null
   status: string | null
   lastContact: string | null
+  lastVisit: string | null
   churchId: number
   church: { name: string }
 }
@@ -33,6 +34,7 @@ export default function Members() {
   const [churchId, setChurchId] = useState('')
   const [error, setError] = useState('')
   const [filterChurchId, setFilterChurchId] = useState('')
+  const [filterVisited, setFilterVisited] = useState('')
 
   const { data: members, isLoading } = useQuery<Member[]>({
     queryKey: ['members'],
@@ -47,6 +49,11 @@ export default function Members() {
 
   const filteredMembers = (members || [])
     .filter((m) => !filterChurchId || m.churchId === Number(filterChurchId))
+    .filter((m) => {
+      if (filterVisited === 'visitado') return !!m.lastVisit
+      if (filterVisited === 'no-visitado') return !m.lastVisit
+      return true
+    })
     .slice()
     .sort((a, b) => {
       if (!filterChurchId) {
@@ -211,6 +218,15 @@ export default function Members() {
                   ))}
                 </select>
               )}
+              <select
+                value={filterVisited}
+                onChange={(e) => setFilterVisited(e.target.value)}
+                className="border border-gray-300 rounded px-3 py-2 text-sm"
+              >
+                <option value="">Visitados y no visitados</option>
+                <option value="visitado">Solo visitados</option>
+                <option value="no-visitado">Solo no visitados</option>
+              </select>
               <button
                 onClick={() => setShowForm(true)}
                 className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
@@ -239,6 +255,8 @@ export default function Members() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Estatus</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Iglesia</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Último Contacto</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Visitado</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Última Visita</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Acciones</th>
                   </tr>
                 </thead>
@@ -252,6 +270,18 @@ export default function Members() {
                       <td className="px-6 py-4 text-sm text-gray-600">{m.church?.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {m.lastContact ? new Date(m.lastContact).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            m.lastVisit ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {m.lastVisit ? 'Visitado' : 'No visitado'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {m.lastVisit ? new Date(m.lastVisit).toLocaleDateString() : '-'}
                       </td>
                       <td className="px-6 py-4 text-sm space-x-2">
                         <button

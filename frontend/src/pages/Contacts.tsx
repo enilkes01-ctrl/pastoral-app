@@ -133,6 +133,20 @@ export default function Contacts() {
     },
   })
 
+  const deleteContact = useMutation({
+    mutationFn: async (id: number) => apiClient.delete(`/api/contacts/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] })
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+    },
+  })
+
+  const handleCancel = (id: number) => {
+    if (window.confirm('¿Cancelar este contacto? Esta acción no se puede deshacer.')) {
+      deleteContact.mutate(id)
+    }
+  }
+
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -308,9 +322,12 @@ export default function Contacts() {
                         {c.user?.firstName} {c.user?.lastName}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">{c.notes || '-'}</td>
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-6 py-4 text-sm space-x-2">
                         <button onClick={() => startEdit(c)} className="text-blue-600 hover:underline">
                           Editar
+                        </button>
+                        <button onClick={() => handleCancel(c.id)} className="text-red-600 hover:underline">
+                          Cancelar
                         </button>
                       </td>
                     </tr>

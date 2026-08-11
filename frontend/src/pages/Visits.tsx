@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../store'
 import apiClient from '../api'
+import MemberPicker from '../components/MemberPicker'
 
 interface Church {
   id: number
@@ -56,7 +57,6 @@ export default function Visits() {
   const [searchParams] = useSearchParams()
 
   const [showForm, setShowForm] = useState(!!searchParams.get('memberId'))
-  const [formChurchId, setFormChurchId] = useState('')
   const [memberId, setMemberId] = useState(searchParams.get('memberId') || '')
   const [type, setType] = useState('visita')
   const [scheduledDate, setScheduledDate] = useState('')
@@ -77,20 +77,6 @@ export default function Visits() {
     queryKey: ['churches'],
     queryFn: async () => (await apiClient.get('/api/churches')).data,
   })
-  const needsChurchPicker = (churches?.length ?? 0) > 1
-
-  // Si venimos de "Agendar visita" en un miembro específico, deducir su iglesia
-  useEffect(() => {
-    const preselectedMemberId = searchParams.get('memberId')
-    if (preselectedMemberId && members && !formChurchId) {
-      const preselected = members.find((m) => String(m.id) === preselectedMemberId)
-      if (preselected) setFormChurchId(String(preselected.churchId))
-    }
-  }, [members, searchParams, formChurchId])
-
-  const membersForChurch = (members || []).filter(
-    (m) => !needsChurchPicker || (formChurchId && m.churchId === Number(formChurchId))
-  )
 
   const createVisit = useMutation({
     mutationFn: async () =>
@@ -98,7 +84,6 @@ export default function Visits() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visits'] })
       setShowForm(false)
-      setFormChurchId('')
       setMemberId('')
       setType('visita')
       setScheduledDate('')
@@ -125,10 +110,6 @@ export default function Visits() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (needsChurchPicker && !formChurchId) {
-      setError('Selecciona una iglesia')
-      return
-    }
     if (!memberId) {
       setError('Selecciona un miembro')
       return
@@ -176,40 +157,12 @@ export default function Visits() {
               {error && <p className="text-sm text-red-600">{error}</p>}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {needsChurchPicker && (
-                  <select
-                    value={formChurchId}
-                    onChange={(e) => {
-                      setFormChurchId(e.target.value)
-                      setMemberId('')
-                    }}
-                    className="border border-gray-300 rounded px-3 py-2"
-                  >
-                    <option value="">Selecciona iglesia *...</option>
-                    {churches?.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <select
+                <MemberPicker
+                  members={members || []}
+                  churches={churches || []}
                   value={memberId}
-                  onChange={(e) => setMemberId(e.target.value)}
-                  disabled={needsChurchPicker && !formChurchId}
-                  className="border border-gray-300 rounded px-3 py-2 disabled:bg-gray-100 disabled:text-gray-400"
-                >
-                  <option value="">
-                    {needsChurchPicker && !formChurchId
-                      ? 'Primero selecciona una iglesia...'
-                      : 'Selecciona miembro *...'}
-                  </option>
-                  {membersForChurch.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => setMemberId(id)}
+                />
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}

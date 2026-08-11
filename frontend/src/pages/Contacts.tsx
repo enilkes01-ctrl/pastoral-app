@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../store'
 import apiClient from '../api'
+import MemberPicker from '../components/MemberPicker'
 
 interface Church {
   id: number
@@ -47,8 +48,6 @@ export default function Contacts() {
 
   const [showForm, setShowForm] = useState(!!searchParams.get('memberId'))
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [formChurchId, setFormChurchId] = useState('')
-  const [memberSearch, setMemberSearch] = useState('')
   const [memberId, setMemberId] = useState(searchParams.get('memberId') || '')
   const [type, setType] = useState('')
   const [date, setDate] = useState('')
@@ -60,8 +59,6 @@ export default function Contacts() {
   const resetForm = () => {
     setShowForm(false)
     setEditingId(null)
-    setFormChurchId('')
-    setMemberSearch('')
     setMemberId('')
     setType('')
     setDate('')
@@ -81,8 +78,6 @@ export default function Contacts() {
   const startEdit = (c: Contact) => {
     setEditingId(c.id)
     setMemberId(String(c.memberId))
-    const existingMember = members?.find((m) => m.id === c.memberId)
-    if (existingMember) setFormChurchId(String(existingMember.churchId))
     setType(c.type)
     setDate(toDatetimeLocal(c.date))
     setNotes(c.notes || '')
@@ -106,20 +101,6 @@ export default function Contacts() {
     queryKey: ['churches'],
     queryFn: async () => (await apiClient.get('/api/churches')).data,
   })
-  const needsChurchPicker = (churches?.length ?? 0) > 1
-
-  // Si venimos de "Registrar contacto" en un miembro específico, deducir su iglesia
-  useEffect(() => {
-    const preselectedMemberId = searchParams.get('memberId')
-    if (preselectedMemberId && members && !formChurchId) {
-      const preselected = members.find((m) => String(m.id) === preselectedMemberId)
-      if (preselected) setFormChurchId(String(preselected.churchId))
-    }
-  }, [members, searchParams, formChurchId])
-
-  const membersForChurch = (members || [])
-    .filter((m) => !needsChurchPicker || (formChurchId && m.churchId === Number(formChurchId)))
-    .filter((m) => !memberSearch || m.name.toLowerCase().includes(memberSearch.toLowerCase()))
 
   const createContact = useMutation({
     mutationFn: async () =>
@@ -185,10 +166,6 @@ export default function Contacts() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (needsChurchPicker && !editingId && !formChurchId) {
-      setError('Selecciona una iglesia')
-      return
-    }
     if (!memberId) {
       setError('Selecciona un miembro')
       return
@@ -240,51 +217,13 @@ export default function Contacts() {
               {error && <p className="text-sm text-red-600">{error}</p>}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {needsChurchPicker && (
-                  <select
-                    value={formChurchId}
-                    onChange={(e) => {
-                      setFormChurchId(e.target.value)
-                      setMemberId('')
-                      setMemberSearch('')
-                    }}
-                    disabled={!!editingId}
-                    className="border border-gray-300 rounded px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
-                  >
-                    <option value="">Selecciona iglesia *...</option>
-                    {churches?.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre..."
-                  value={memberSearch}
-                  onChange={(e) => setMemberSearch(e.target.value)}
-                  disabled={!!editingId || (needsChurchPicker && !formChurchId)}
-                  className="border border-gray-300 rounded px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
-                />
-                <select
+                <MemberPicker
+                  members={members || []}
+                  churches={churches || []}
                   value={memberId}
-                  onChange={(e) => setMemberId(e.target.value)}
-                  disabled={!!editingId || (needsChurchPicker && !formChurchId)}
-                  size={memberSearch ? 6 : undefined}
-                  className="border border-gray-300 rounded px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500 md:col-span-2"
-                >
-                  <option value="">
-                    {needsChurchPicker && !formChurchId
-                      ? 'Primero selecciona una iglesia...'
-                      : 'Selecciona miembro *...'}
-                  </option>
-                  {membersForChurch.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => setMemberId(id)}
+                  disabled={!!editingId}
+                />
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}

@@ -64,7 +64,7 @@ router.post('/', asyncHandler(async (req: AuthRequest, res) => {
 
   await prisma.member.update({
     where: { id: member.id },
-    data: { lastContact: new Date(date) },
+    data: { lastContact: new Date(date), messageSuggested: true },
   });
 
   res.status(201).json(contact);

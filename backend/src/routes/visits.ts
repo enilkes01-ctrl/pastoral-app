@@ -62,6 +62,11 @@ router.post('/', asyncHandler(async (req: AuthRequest, res) => {
     },
   });
 
+  await prisma.member.update({
+    where: { id: member.id },
+    data: { messageSuggested: true },
+  });
+
   res.status(201).json(visit);
 }));
 

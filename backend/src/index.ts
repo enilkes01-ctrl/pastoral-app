@@ -6,6 +6,7 @@ import memberRoutes from './routes/members';
 import contactRoutes from './routes/contacts';
 import visitRoutes from './routes/visits';
 import churchRoutes from './routes/churches';
+import suggestionRoutes from './routes/suggestions';
 
 // Última defensa: si algo se escapa sin manejar (ej. un rechazo de promesa
 // fuera de una ruta), registrar y seguir vivo en vez de tumbar el servidor.
@@ -34,6 +35,7 @@ app.use('/api/members', memberRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/churches', churchRoutes);
+app.use('/api/suggestions', suggestionRoutes);
 
 // Manejador de errores: cualquier error de una ruta (ej. la base de datos no
 // respondió) termina aquí como un 500 normal, en vez de tumbar el servidor.

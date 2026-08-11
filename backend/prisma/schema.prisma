@@ -51,6 +51,7 @@ model Member {
   lastContact   DateTime?
   lastVisit     DateTime?
   notes         String?
+  messageSuggested Boolean @default(false) // ya sugerido o contactado en el ciclo actual
   churchId      Int
   church        Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
   createdAt     DateTime  @default(now())
@@ -60,6 +61,7 @@ model Member {
   needs         Need[]
   contacts      Contact[]
   visits        VisitSchedule[]
+  suggestions   MessageSuggestion[]
 
   @@map("members")
 }
@@ -121,6 +123,16 @@ model VisitSchedule {
   updatedAt     DateTime  @updatedAt
 
   @@map("visit_schedule")
+}
+
+model MessageSuggestion {
+  id        Int      @id @default(autoincrement())
+  dateKey   String   // "YYYY-MM-DD" en hora de Rep. Dominicana
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("message_suggestions")
 }
 
 model PreachingSchedule {

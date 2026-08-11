@@ -156,6 +156,12 @@ export default function Dashboard() {
               >
                 Registrar Contacto
               </button>
+              <button
+                onClick={() => navigate('/suggestions')}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded"
+              >
+                Sugerencias del Día
+              </button>
             </div>
           </div>
 

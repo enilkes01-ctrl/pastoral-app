@@ -23,50 +23,67 @@ export function todayKeyRD(): string {
   return rd.toISOString().slice(0, 10);
 }
 
-export async function getOrGenerateSuggestions(dateKey: string = todayKeyRD()) {
-  const existing = await prisma.messageSuggestion.findMany({
-    where: { dateKey },
-    include: { member: { include: { church: true } } },
+// Reparte el cupo de cada iglesia accesible; la de mayor cupo (y, en caso de
+// empate, menor id) absorbe el faltante de las que ya se quedaron sin miembros.
+async function pickForChurches(churches: { id: number; name: string }[]) {
+  const ordered = [...churches].sort((a, b) => {
+    const qa = QUOTAS[a.name] ?? 0;
+    const qb = QUOTAS[b.name] ?? 0;
+    if (qa !== qb) return qa - qb; // cupo más alto queda al final (absorbe)
+    return b.id - a.id; // empate: id más bajo queda al final (absorbe)
   });
-  if (existing.length > 0) {
-    return existing.map((s) => s.member);
-  }
-
-  const churches = await prisma.church.findMany();
-  const bigChurch = churches.find((c) => c.name === BIG_CHURCH);
-  if (!bigChurch) return [];
-
-  // Si ya no quedan miembros sin sugerir en la iglesia grande, arranca un ciclo nuevo
-  const remainingBig = await prisma.member.count({
-    where: { churchId: bigChurch.id, messageSuggested: false },
-  });
-  if (remainingBig === 0) {
-    await prisma.member.updateMany({ data: { messageSuggested: false } });
-  }
 
   let shortfall = 0;
   const picked: { id: number }[] = [];
 
-  for (const church of churches) {
-    if (church.id === bigChurch.id) continue; // la grande absorbe el faltante al final
-    const quota = QUOTAS[church.name] ?? 0;
+  for (let i = 0; i < ordered.length; i++) {
+    const church = ordered[i];
+    const isAbsorber = i === ordered.length - 1;
+    const baseQuota = QUOTAS[church.name] ?? 0;
+    const quota = isAbsorber ? baseQuota + shortfall : baseQuota;
     if (quota === 0) continue;
+
     const pool = await prisma.member.findMany({
       where: { churchId: church.id, messageSuggested: false },
       select: { id: true },
     });
     const take = shuffle(pool).slice(0, quota);
     picked.push(...take);
-    shortfall += quota - take.length;
+    if (!isAbsorber) shortfall += quota - take.length;
   }
 
-  const bigQuota = (QUOTAS[BIG_CHURCH] ?? 0) + shortfall;
-  const bigPool = await prisma.member.findMany({
-    where: { churchId: bigChurch.id, messageSuggested: false },
-    select: { id: true },
-  });
-  picked.push(...shuffle(bigPool).slice(0, bigQuota));
+  return picked;
+}
 
+export async function getOrGenerateSuggestionsForUser(
+  user: { id: number; role: string; churchIds: number[] },
+  dateKey: string = todayKeyRD()
+) {
+  const existing = await prisma.messageSuggestion.findMany({
+    where: { dateKey, userId: user.id },
+    include: { member: { include: { church: true } } },
+  });
+  if (existing.length > 0) {
+    return existing.map((s) => s.member);
+  }
+
+  const allChurches = await prisma.church.findMany();
+  const bigChurch = allChurches.find((c) => c.name === BIG_CHURCH);
+
+  // Si ya no quedan miembros sin sugerir en la iglesia grande, arranca un ciclo nuevo (para todos)
+  if (bigChurch) {
+    const remainingBig = await prisma.member.count({
+      where: { churchId: bigChurch.id, messageSuggested: false },
+    });
+    if (remainingBig === 0) {
+      await prisma.member.updateMany({ data: { messageSuggested: false } });
+    }
+  }
+
+  const accessibleChurches =
+    user.role === 'admin' ? allChurches : allChurches.filter((c) => user.churchIds.includes(c.id));
+
+  const picked = await pickForChurches(accessibleChurches);
   if (picked.length === 0) return [];
 
   const ids = picked.map((p) => p.id);
@@ -77,7 +94,7 @@ export async function getOrGenerateSuggestions(dateKey: string = todayKeyRD()) {
   });
 
   await prisma.messageSuggestion.createMany({
-    data: ids.map((id) => ({ dateKey, memberId: id })),
+    data: ids.map((id) => ({ dateKey, userId: user.id, memberId: id })),
   });
 
   const members = await prisma.member.findMany({

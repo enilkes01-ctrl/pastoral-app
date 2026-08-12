@@ -25,6 +25,7 @@ model User {
   contacts       Contact[]
   visits         VisitSchedule[]
   sermons        PreachingSchedule[]
+  suggestionsFor MessageSuggestion[]
 
   @@map("users")
 }
@@ -128,6 +129,8 @@ model VisitSchedule {
 model MessageSuggestion {
   id        Int      @id @default(autoincrement())
   dateKey   String   // "YYYY-MM-DD" en hora de Rep. Dominicana
+  userId    Int      // para quién es esta sugerencia (cada usuario tiene su propia lista)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   memberId  Int
   member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())

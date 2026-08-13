@@ -18,6 +18,7 @@ interface Member {
 
 interface Visit {
   id: number
+  memberId: number
   type: string
   scheduledDate: string
   status: string
@@ -57,11 +58,39 @@ export default function Visits() {
   const [searchParams] = useSearchParams()
 
   const [showForm, setShowForm] = useState(!!searchParams.get('memberId'))
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [memberId, setMemberId] = useState(searchParams.get('memberId') || '')
   const [type, setType] = useState('visita')
   const [scheduledDate, setScheduledDate] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
+
+  const resetForm = () => {
+    setShowForm(false)
+    setEditingId(null)
+    setMemberId('')
+    setType('visita')
+    setScheduledDate('')
+    setNotes('')
+    setError('')
+  }
+
+  // datetime-local necesita "YYYY-MM-DDTHH:mm" en hora local, sin segundos ni zona
+  const toDatetimeLocal = (isoDate: string) => {
+    const d = new Date(isoDate)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  const startEdit = (v: Visit) => {
+    setEditingId(v.id)
+    setMemberId(String(v.memberId))
+    setType(v.type)
+    setScheduledDate(toDatetimeLocal(v.scheduledDate))
+    setNotes(v.notes || '')
+    setError('')
+    setShowForm(true)
+  }
 
   const { data: visits, isLoading } = useQuery<Visit[]>({
     queryKey: ['visits'],
@@ -83,15 +112,22 @@ export default function Visits() {
       (await apiClient.post('/api/visits', { memberId: Number(memberId), type, scheduledDate, notes })).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visits'] })
-      setShowForm(false)
-      setMemberId('')
-      setType('visita')
-      setScheduledDate('')
-      setNotes('')
-      setError('')
+      resetForm()
     },
     onError: (err: any) => {
       setError(err.response?.data?.error || 'Error al agendar')
+    },
+  })
+
+  const updateVisit = useMutation({
+    mutationFn: async () =>
+      (await apiClient.put(`/api/visits/${editingId}`, { type, scheduledDate, notes })).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
+      resetForm()
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error || 'Error al actualizar')
     },
   })
 
@@ -118,7 +154,11 @@ export default function Visits() {
       setError('Selecciona una fecha')
       return
     }
-    createVisit.mutate()
+    if (editingId) {
+      updateVisit.mutate()
+    } else {
+      createVisit.mutate()
+    }
   }
 
   const sortedVisits = [...(visits || [])].sort((a, b) => {
@@ -152,7 +192,9 @@ export default function Visits() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {showForm && (
           <div className="bg-white rounded-lg shadow mb-6 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Nuevo Pendiente</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {editingId ? 'Editar Pendiente' : 'Nuevo Pendiente'}
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -162,6 +204,7 @@ export default function Visits() {
                   churches={churches || []}
                   value={memberId}
                   onChange={(id) => setMemberId(id)}
+                  disabled={!!editingId}
                 />
                 <select
                   value={type}
@@ -190,14 +233,14 @@ export default function Visits() {
               <div className="flex space-x-2">
                 <button
                   type="submit"
-                  disabled={createVisit.isPending}
+                  disabled={createVisit.isPending || updateVisit.isPending}
                   className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded disabled:opacity-50"
                 >
-                  {createVisit.isPending ? 'Guardando...' : 'Guardar'}
+                  {createVisit.isPending || updateVisit.isPending ? 'Guardando...' : 'Guardar'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={resetForm}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
                 >
                   Cancelar
@@ -262,6 +305,9 @@ export default function Visits() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">{v.notes || '-'}</td>
                       <td className="px-6 py-4 text-sm space-x-2">
+                        <button onClick={() => startEdit(v)} className="text-blue-600 hover:underline">
+                          Editar
+                        </button>
                         {v.status === 'pendiente' && (
                           <>
                             <button

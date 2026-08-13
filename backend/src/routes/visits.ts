@@ -76,17 +76,22 @@ router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
   });
   if (!visit) return res.status(404).json({ error: 'Visita no encontrada' });
 
-  const { status, notes, scheduledDate } = req.body;
+  const { status, type, notes, scheduledDate } = req.body;
+  if (type && !VALID_TYPES.includes(type)) {
+    return res.status(400).json({ error: 'Tipo inválido' });
+  }
+
   const updated = await prisma.visitSchedule.update({
     where: { id: visit.id },
     data: {
       status,
+      type,
       notes,
       scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
     },
   });
 
-  if (updated.type === 'visita') await recalcLastVisit(updated.memberId);
+  await recalcLastVisit(updated.memberId);
 
   res.json(updated);
 }));

@@ -53,6 +53,15 @@ model Member {
   lastVisit     DateTime?
   notes         String?
   messageSuggested Boolean @default(false) // ya sugerido o contactado en el ciclo actual
+  photo            String?   // base64 comprimido, generado en el navegador
+  address          String?
+  birthDate        DateTime?
+  baptismDate      DateTime?
+  ministries       String?
+  responsibilities String?
+  interests        String?
+  followUpLevel    String    @default("normal") // normal, prioritario, urgente
+  nextAction       String?
   churchId      Int
   church        Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
   createdAt     DateTime  @default(now())
@@ -63,8 +72,19 @@ model Member {
   contacts      Contact[]
   visits        VisitSchedule[]
   suggestions   MessageSuggestion[]
+  tags          Tag[]     @relation("MemberTags")
 
   @@map("members")
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  color     String?
+  members   Member[] @relation("MemberTags")
+  createdAt DateTime @default(now())
+
+  @@map("tags")
 }
 
 model Family {

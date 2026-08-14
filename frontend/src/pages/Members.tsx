@@ -22,8 +22,16 @@ interface Member {
   status: string | null
   lastContact: string | null
   lastVisit: string | null
+  followUpLevel: string
   churchId: number
   church: { name: string }
+}
+
+const LEVEL_LABEL: Record<string, string> = { normal: 'Normal', prioritario: 'Prioritario', urgente: 'Urgente' }
+const LEVEL_VARIANT: Record<string, 'neutral' | 'warning' | 'destructive'> = {
+  normal: 'neutral',
+  prioritario: 'warning',
+  urgente: 'destructive',
 }
 
 const inputClass =
@@ -215,6 +223,7 @@ export default function Members() {
               <thead className="border-b border-border bg-muted/50">
                 <tr>
                   <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Nombre</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Nivel</th>
                   <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Teléfono</th>
                   <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Email</th>
                   <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Estatus</th>
@@ -228,7 +237,19 @@ export default function Members() {
               <tbody className="divide-y divide-border">
                 {filteredMembers.map((m) => (
                   <tr key={m.id} className="transition-colors hover:bg-muted/40">
-                    <td className="px-5 py-4 text-sm font-medium text-foreground">{m.name}</td>
+                    <td className="px-5 py-4 text-sm font-medium">
+                      <button
+                        onClick={() => navigate(`/members/${m.id}`)}
+                        className="text-foreground hover:text-primary hover:underline"
+                      >
+                        {m.name}
+                      </button>
+                    </td>
+                    <td className="px-5 py-4 text-sm">
+                      <Badge variant={LEVEL_VARIANT[m.followUpLevel] || 'neutral'}>
+                        {LEVEL_LABEL[m.followUpLevel] || m.followUpLevel}
+                      </Badge>
+                    </td>
                     <td className="px-5 py-4 text-sm text-muted-foreground">{m.phone || '-'}</td>
                     <td className="px-5 py-4 text-sm text-muted-foreground">{m.email || '-'}</td>
                     <td className="px-5 py-4 text-sm text-muted-foreground">{m.status || '-'}</td>

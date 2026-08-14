@@ -18,6 +18,7 @@ model User {
   lastName       String?
   role           String    @default("visitador") // admin, visitador
   active         Boolean   @default(true)
+  calendarToken  String?   @unique
   churchId       Int
   church         Church    @relation("UserHomeChurch", fields: [churchId], references: [id])
   accessChurches Church[]  @relation("UserChurchAccess")

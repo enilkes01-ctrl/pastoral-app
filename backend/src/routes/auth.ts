@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
@@ -130,11 +131,19 @@ router.get('/me', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
       lastName: true,
       role: true,
       churchId: true,
+      calendarToken: true,
       church: { select: { name: true } },
       accessChurches: { select: { id: true, name: true } },
     },
   });
   res.json(user);
+}));
+
+// Genera (o regenera) el token opaco que autentica el enlace de suscripción de calendario
+router.post('/me/calendar-token', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
+  const calendarToken = crypto.randomBytes(24).toString('hex');
+  await prisma.user.update({ where: { id: req.user!.id }, data: { calendarToken } });
+  res.json({ calendarToken });
 }));
 
 router.put('/me/password', requireAuth, asyncHandler(async (req: AuthRequest, res) => {

@@ -595,7 +595,23 @@ export default function MemberProfile() {
           <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <InfoRow icon={Phone} label="Teléfono" value={member.phone} />
             <InfoRow icon={Mail} label="Email" value={member.email} />
-            <InfoRow icon={Home} label="Dirección" value={member.address} />
+            <div className="flex items-start gap-2">
+              <Home className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Dirección</p>
+                <p className="text-sm text-foreground">{member.address || '-'}</p>
+                {member.address && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(member.address)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <MapPin className="h-3 w-3" /> Cómo llegar
+                  </a>
+                )}
+              </div>
+            </div>
             <InfoRow icon={Cake} label="Nacimiento" value={member.birthDate ? new Date(member.birthDate).toLocaleDateString() : null} />
             <InfoRow icon={Droplets} label="Bautismo" value={member.baptismDate ? new Date(member.baptismDate).toLocaleDateString() : null} />
             <InfoRow icon={HeartHandshake} label="Ministerios" value={member.ministries} />

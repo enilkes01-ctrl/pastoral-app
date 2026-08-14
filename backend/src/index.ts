@@ -11,6 +11,7 @@ import tagRoutes from './routes/tags';
 import taskRoutes from './routes/tasks';
 import templateRoutes from './routes/templates';
 import preachingRoutes from './routes/preaching';
+import userRoutes from './routes/users';
 
 // Última defensa: si algo se escapa sin manejar (ej. un rechazo de promesa
 // fuera de una ruta), registrar y seguir vivo en vez de tumbar el servidor.
@@ -45,6 +46,7 @@ app.use('/api/tags', tagRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/preaching', preachingRoutes);
+app.use('/api/users', userRoutes);
 
 // Manejador de errores: cualquier error de una ruta (ej. la base de datos no
 // respondió) termina aquí como un 500 normal, en vez de tumbar el servidor.

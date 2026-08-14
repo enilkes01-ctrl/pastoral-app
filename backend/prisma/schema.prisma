@@ -17,6 +17,7 @@ model User {
   firstName      String?
   lastName       String?
   role           String    @default("visitador") // admin, visitador
+  active         Boolean   @default(true)
   churchId       Int
   church         Church    @relation("UserHomeChurch", fields: [churchId], references: [id])
   accessChurches Church[]  @relation("UserChurchAccess")

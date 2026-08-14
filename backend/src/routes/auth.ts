@@ -7,6 +7,22 @@ import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
+// Limitador de intentos de login en memoria (sin dependencia nueva) — se reinicia
+// si el backend se reinicia, es una protección liviana, no un límite duro.
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCK_MS = 15 * 60 * 1000;
+const loginAttempts = new Map<string, { count: number; lockedUntil: number }>();
+
+function registerFailedLogin(key: string) {
+  const attempt = loginAttempts.get(key) || { count: 0, lockedUntil: 0 };
+  attempt.count += 1;
+  if (attempt.count >= MAX_LOGIN_ATTEMPTS) {
+    attempt.lockedUntil = Date.now() + LOGIN_LOCK_MS;
+    attempt.count = 0;
+  }
+  loginAttempts.set(key, attempt);
+}
+
 router.post('/login', asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -14,18 +30,32 @@ router.post('/login', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Email y contraseña son requeridos' });
   }
 
+  const key = email.toLowerCase();
+  const attempt = loginAttempts.get(key);
+  if (attempt && attempt.lockedUntil > Date.now()) {
+    return res.status(429).json({ error: 'Demasiados intentos fallidos. Intenta de nuevo en unos minutos.' });
+  }
+
   const user = await prisma.user.findUnique({
     where: { email },
     include: { accessChurches: true },
   });
   if (!user) {
+    registerFailedLogin(key);
     return res.status(401).json({ error: 'Credenciales inválidas' });
+  }
+
+  if (!user.active) {
+    return res.status(403).json({ error: 'Cuenta desactivada. Contacta a tu administrador.' });
   }
 
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) {
+    registerFailedLogin(key);
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
+
+  loginAttempts.delete(key);
 
   const churchIds = [user.churchId, ...user.accessChurches.map((c) => c.id)];
 
@@ -105,6 +135,28 @@ router.get('/me', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
     },
   });
   res.json(user);
+}));
+
+router.put('/me/password', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Contraseña actual y nueva son requeridas' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const valid = await bcrypt.compare(currentPassword, user.password);
+  if (!valid) return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+
+  res.status(204).send();
 }));
 
 export default router;

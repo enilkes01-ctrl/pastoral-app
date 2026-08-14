@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Home, Users, CalendarDays, MessageSquare, Sparkles, ListChecks, Moon, Sun, LogOut, HeartHandshake } from 'lucide-react'
+import { Home, Users, CalendarDays, MessageSquare, Sparkles, ListChecks, Moon, Sun, LogOut, HeartHandshake, KeyRound, UserCog } from 'lucide-react'
 import { useStore } from '../../store'
 import { cn } from '../../lib/utils'
 import GlobalSearch from '../GlobalSearch'
@@ -57,6 +57,22 @@ export default function AppLayout() {
           <div className="mb-2 px-3 py-1 text-sm text-muted-foreground">
             {user?.firstName} {user?.lastName}
           </div>
+          <NavLink
+            to="/account"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <KeyRound className="h-5 w-5" />
+            Cambiar contraseña
+          </NavLink>
+          {user?.role === 'admin' && (
+            <NavLink
+              to="/users"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <UserCog className="h-5 w-5" />
+              Usuarios
+            </NavLink>
+          )}
           <button
             onClick={toggleTheme}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -86,6 +102,22 @@ export default function AppLayout() {
         <div className="flex items-center gap-2">
           <NotificationBell />
           <GlobalSearch />
+          <button
+            onClick={() => navigate('/account')}
+            aria-label="Cambiar contraseña"
+            className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+          >
+            <KeyRound className="h-5 w-5" />
+          </button>
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/users')}
+              aria-label="Usuarios"
+              className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+            >
+              <UserCog className="h-5 w-5" />
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             aria-label="Cambiar tema"

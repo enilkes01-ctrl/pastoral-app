@@ -9,6 +9,8 @@ import Contacts from './pages/Contacts'
 import Suggestions from './pages/Suggestions'
 import Tasks from './pages/Tasks'
 import Templates from './pages/Templates'
+import Users from './pages/Users'
+import Account from './pages/Account'
 import ProtectedRoute from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 
@@ -32,6 +34,8 @@ function App() {
               <Route path="/suggestions" element={<Suggestions />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/templates" element={<Templates />} />
+              <Route path="/users" element={<Users />} />
+              <Route path="/account" element={<Account />} />
             </Route>
           </Route>
 

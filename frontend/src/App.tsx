@@ -7,6 +7,7 @@ import Visits from './pages/Visits'
 import Contacts from './pages/Contacts'
 import Suggestions from './pages/Suggestions'
 import ProtectedRoute from './components/ProtectedRoute'
+import AppLayout from './components/layout/AppLayout'
 
 const queryClient = new QueryClient()
 
@@ -19,11 +20,13 @@ function App() {
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/visits" element={<Visits />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/suggestions" element={<Suggestions />} />
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/members" element={<Members />} />
+              <Route path="/visits" element={<Visits />} />
+              <Route path="/contacts" element={<Contacts />} />
+              <Route path="/suggestions" element={<Suggestions />} />
+            </Route>
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

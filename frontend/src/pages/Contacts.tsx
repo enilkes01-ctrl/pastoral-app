@@ -1,9 +1,14 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useStore } from '../store'
+import { Plus, MessageSquare, Pencil, X as XIcon } from 'lucide-react'
 import apiClient from '../api'
 import MemberPicker from '../components/MemberPicker'
+import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
+import Spinner from '../components/ui/Spinner'
+import EmptyState from '../components/ui/EmptyState'
 
 interface Church {
   id: number
@@ -34,15 +39,16 @@ const TYPE_LABEL: Record<string, string> = {
   mensaje: 'Mensaje',
 }
 
-const TYPE_COLOR: Record<string, string> = {
-  visita: 'bg-blue-100 text-blue-800',
-  llamada: 'bg-purple-100 text-purple-800',
-  mensaje: 'bg-teal-100 text-teal-800',
+const TYPE_VARIANT: Record<string, 'primary' | 'accent' | 'neutral'> = {
+  visita: 'primary',
+  llamada: 'accent',
+  mensaje: 'neutral',
 }
 
+const inputClass =
+  'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring'
+
 export default function Contacts() {
-  const logout = useStore((state) => state.logout)
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
 
@@ -159,11 +165,6 @@ export default function Contacts() {
     }
   }
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!memberId) {
@@ -186,37 +187,17 @@ export default function Contacts() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Historial de Contactos</h1>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
-            >
-              Salir
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {showForm && (
-          <div className="bg-white rounded-lg shadow mb-6 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {editingId ? 'Editar Contacto' : 'Nuevo Contacto'}
-            </h2>
+    <div className="space-y-6">
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingId ? 'Editar Contacto' : 'Nuevo Contacto'}</CardTitle>
+          </CardHeader>
+          <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <MemberPicker
                   members={members || []}
                   churches={churches || []}
@@ -224,11 +205,7 @@ export default function Contacts() {
                   onChange={(id) => setMemberId(id)}
                   disabled={!!editingId}
                 />
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2"
-                >
+                <select value={type} onChange={(e) => setType(e.target.value)} className={inputClass}>
                   <option value="">Tipo de contacto *...</option>
                   <option value="llamada">Llamada</option>
                   <option value="mensaje">Mensaje</option>
@@ -237,113 +214,106 @@ export default function Contacts() {
                   type="datetime-local"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2"
+                  className={inputClass}
                 />
-                <div className="flex items-center space-x-4">
-                  <label className="flex items-center space-x-1 text-sm text-gray-700">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-1.5 text-sm text-foreground">
                     <input type="checkbox" checked={viaSms} onChange={(e) => setViaSms(e.target.checked)} />
-                    <span>Vía SMS/WhatsApp</span>
+                    Vía SMS/WhatsApp
                   </label>
-                  <label className="flex items-center space-x-1 text-sm text-gray-700">
+                  <label className="flex items-center gap-1.5 text-sm text-foreground">
                     <input type="checkbox" checked={viaEmail} onChange={(e) => setViaEmail(e.target.checked)} />
-                    <span>Vía Email</span>
+                    Vía Email
                   </label>
                 </div>
                 <textarea
                   placeholder="Notas (opcional)"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 md:col-span-2"
+                  className={`${inputClass} md:col-span-2`}
                   rows={3}
                 />
               </div>
 
-              <div className="flex space-x-2">
-                <button
-                  type="submit"
-                  disabled={createContact.isPending || updateContact.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded disabled:opacity-50"
-                >
-                  {createContact.isPending || updateContact.isPending ? 'Guardando...' : 'Guardar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
-                >
+              <div className="flex gap-2">
+                <Button type="submit" loading={createContact.isPending || updateContact.isPending}>
+                  Guardar
+                </Button>
+                <Button type="button" variant="outline" onClick={resetForm}>
                   Cancelar
-                </button>
+                </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Contactos Registrados</CardTitle>
+          {!showForm && (
+            <Button size="sm" variant="accent" onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4" /> Registrar Contacto
+            </Button>
+          )}
+        </CardHeader>
+
+        {isLoading ? (
+          <Spinner />
+        ) : !contacts || contacts.length === 0 ? (
+          <EmptyState icon={MessageSquare} title="No hay contactos registrados aún" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-border bg-muted/50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Miembro</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Tipo</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Fecha</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Registrado por</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Notas</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {contacts.map((c) => (
+                  <tr key={c.id} className="transition-colors hover:bg-muted/40">
+                    <td className="px-5 py-4 text-sm font-medium text-foreground">{c.member?.name}</td>
+                    <td className="px-5 py-4 text-sm">
+                      <Badge variant={TYPE_VARIANT[c.type] || 'neutral'}>{TYPE_LABEL[c.type] || c.type}</Badge>
+                      {c.viaSms && <span className="ml-1 text-xs text-muted-foreground">(SMS/WhatsApp)</span>}
+                      {c.viaEmail && <span className="ml-1 text-xs text-muted-foreground">(Email)</span>}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">
+                      {new Date(c.date).toLocaleString()}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">
+                      {c.user?.firstName} {c.user?.lastName}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{c.notes || '-'}</td>
+                    <td className="px-5 py-4 text-sm">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => startEdit(c)}
+                          className="flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Editar
+                        </button>
+                        <button
+                          onClick={() => handleCancel(c.id)}
+                          className="flex items-center gap-1 text-destructive hover:underline"
+                        >
+                          <XIcon className="h-3.5 w-3.5" /> Cancelar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Contactos Registrados</h2>
-            {!showForm && (
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded"
-              >
-                + Registrar Contacto
-              </button>
-            )}
-          </div>
-
-          {isLoading ? (
-            <div className="px-6 py-12 text-center text-gray-500">Cargando...</div>
-          ) : !contacts || contacts.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-gray-500">No hay contactos registrados aún.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Miembro</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Tipo</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Fecha</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Registrado por</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Notas</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {contacts.map((c) => (
-                    <tr key={c.id}>
-                      <td className="px-6 py-4 text-sm text-gray-900">{c.member?.name}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${TYPE_COLOR[c.type]}`}>
-                          {TYPE_LABEL[c.type] || c.type}
-                        </span>
-                        {c.viaSms && <span className="ml-1 text-xs text-gray-500">(SMS/WhatsApp)</span>}
-                        {c.viaEmail && <span className="ml-1 text-xs text-gray-500">(Email)</span>}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(c.date).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {c.user?.firstName} {c.user?.lastName}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{c.notes || '-'}</td>
-                      <td className="px-6 py-4 text-sm space-x-2">
-                        <button onClick={() => startEdit(c)} className="text-blue-600 hover:underline">
-                          Editar
-                        </button>
-                        <button onClick={() => handleCancel(c.id)} className="text-red-600 hover:underline">
-                          Cancelar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </main>
+      </Card>
     </div>
   )
 }

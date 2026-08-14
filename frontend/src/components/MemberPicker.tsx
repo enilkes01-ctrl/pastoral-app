@@ -50,13 +50,13 @@ export default function MemberPicker({ members, churches, value, onChange, disab
 
   if (selected) {
     return (
-      <div className="border border-gray-300 rounded px-3 py-2 flex items-center justify-between bg-gray-50 md:col-span-2">
-        <span className="text-sm text-gray-900">{selected.name}</span>
+      <div className="flex items-center justify-between rounded-lg border border-input bg-muted px-3 py-2 md:col-span-2">
+        <span className="text-sm text-foreground">{selected.name}</span>
         {!disabled && (
           <button
             type="button"
             onClick={() => onChange('', 0)}
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-primary hover:underline"
           >
             Cambiar
           </button>
@@ -66,13 +66,13 @@ export default function MemberPicker({ members, churches, value, onChange, disab
   }
 
   return (
-    <div className="md:col-span-2 space-y-2">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-2 md:col-span-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <select
           value={churchId}
           onChange={(e) => setChurchId(e.target.value)}
           disabled={disabled}
-          className="border border-gray-300 rounded px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
+          className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:bg-muted disabled:text-muted-foreground"
         >
           <option value="">Todas las iglesias</option>
           {churches.map((c) => (
@@ -88,14 +88,14 @@ export default function MemberPicker({ members, churches, value, onChange, disab
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          className="border border-gray-300 rounded px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
+          className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:bg-muted disabled:text-muted-foreground"
         />
       </div>
 
       {search && (
-        <div className="border border-gray-200 rounded max-h-48 overflow-y-auto">
+        <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
           {matches.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-red-600">
+            <p className="px-3 py-2 text-sm text-destructive">
               No se encontró ningún miembro con ese nombre.
             </p>
           ) : (
@@ -104,7 +104,7 @@ export default function MemberPicker({ members, churches, value, onChange, disab
                 key={m.id}
                 type="button"
                 onClick={() => pick(m)}
-                className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-0"
+                className="block w-full border-b border-border px-3 py-2 text-left text-sm last:border-0 hover:bg-primary/5"
               >
                 {m.name}
               </button>

@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useStore } from '../store'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { Users, CalendarPlus, MessageSquarePlus, Sparkles, BellRing, X, CheckCircle2, Clock } from 'lucide-react'
 import apiClient from '../api'
+import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 
 interface Member {
   id: number
@@ -35,9 +36,14 @@ const TYPE_LABEL_PLURAL: Record<string, [string, string]> = {
   mensaje: ['mensaje', 'mensajes'],
 }
 
+const QUICK_ACTIONS = [
+  { to: '/members', label: 'Ver Miembros', icon: Users },
+  { to: '/visits', label: 'Agendar', icon: CalendarPlus },
+  { to: '/contacts', label: 'Registrar Contacto', icon: MessageSquarePlus },
+  { to: '/suggestions', label: 'Sugerencias del Día', icon: Sparkles },
+]
+
 export default function Dashboard() {
-  const user = useStore((state) => state.user)
-  const logout = useStore((state) => state.logout)
   const navigate = useNavigate()
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
@@ -90,100 +96,84 @@ export default function Dashboard() {
     })
     .join(', ')
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
+  const stats = [
+    { label: 'Miembros', value: totalMembers, icon: Users, color: 'text-primary bg-primary/10' },
+    { label: 'Visitas pendientes', value: visitasPendientes, icon: Clock, color: 'text-warning bg-warning/15' },
+    { label: 'Visitas realizadas', value: visitasRealizadas, icon: CheckCircle2, color: 'text-success bg-success/15' },
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Pastoral App</h1>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">{user?.firstName} {user?.lastName}</span>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
-            >
-              Salir
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {!bannerDismissed && pendingDue.length > 0 && (
-          <div className="mb-6 bg-yellow-50 border border-yellow-300 rounded-lg px-4 py-3 flex items-center justify-between">
-            <p className="text-sm text-yellow-800">
-              📌 Tienes pendiente: <span className="font-semibold">{pendingSummary}</span> para hoy o antes.{' '}
-              <button onClick={() => navigate('/visits')} className="underline font-medium">
+    <div className="space-y-6">
+      {!bannerDismissed && pendingDue.length > 0 && (
+        <Card className="flex items-center justify-between border-warning/30 bg-warning/10 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <BellRing className="h-5 w-5 shrink-0 text-warning" />
+            <p className="text-sm text-foreground">
+              Tienes pendiente: <span className="font-semibold">{pendingSummary}</span> para hoy o antes.{' '}
+              <button onClick={() => navigate('/visits')} className="font-medium text-primary underline">
                 Ver agenda
               </button>
             </p>
+          </div>
+          <button
+            onClick={() => setBannerDismissed(true)}
+            aria-label="Cerrar aviso"
+            className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-warning/20"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {stats.map(({ label, value, icon: Icon, color }) => (
+          <Card key={label} className="p-5">
+            <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-full ${color}`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <p className="text-2xl font-semibold text-foreground">{value}</p>
+            <p className="text-sm text-muted-foreground">{label}</p>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Acciones Rápidas</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {QUICK_ACTIONS.map(({ to, label, icon: Icon }) => (
             <button
-              onClick={() => setBannerDismissed(true)}
-              className="text-yellow-700 hover:text-yellow-900 ml-4"
-              aria-label="Cerrar aviso"
+              key={to}
+              onClick={() => navigate(to)}
+              className="flex flex-col items-center gap-2 rounded-xl border border-border p-4 text-center transition-colors hover:border-primary/40 hover:bg-primary/5"
             >
-              ✕
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Icon className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium text-foreground">{label}</span>
             </button>
-          </div>
-        )}
+          ))}
+        </CardContent>
+      </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
-            <div className="space-y-2">
-              <button
-                onClick={() => navigate('/members')}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-              >
-                Ver Miembros
-              </button>
-              <button
-                onClick={() => navigate('/visits')}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
-              >
-                Agenda
-              </button>
-              <button
-                onClick={() => navigate('/contacts')}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded"
-              >
-                Registrar Contacto
-              </button>
-              <button
-                onClick={() => navigate('/suggestions')}
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded"
-              >
-                Sugerencias del Día
-              </button>
-            </div>
-          </div>
-
-          {/* Statistics */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Estadísticas</h2>
-            <div className="space-y-2 text-gray-600">
-              <p>Total de miembros: <span className="font-semibold text-gray-900">{totalMembers}</span></p>
-              <p>Visitas pendientes: <span className="font-semibold text-gray-900">{visitasPendientes}</span></p>
-              <p>Visitas realizadas: <span className="font-semibold text-gray-900">{visitasRealizadas}</span></p>
-              <p>
-                Última actividad:{' '}
-                <span className="font-semibold text-gray-900">
-                  {ultimaActividad
-                    ? `${ultimaActividad.text} (${new Date(ultimaActividad.date).toLocaleString()})`
-                    : 'Sin actividad aún'}
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
+      <Card>
+        <CardHeader>
+          <CardTitle>Última actividad</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {ultimaActividad ? (
+            <p className="text-sm text-foreground">
+              {ultimaActividad.text}{' '}
+              <span className="text-muted-foreground">
+                ({new Date(ultimaActividad.date).toLocaleString()})
+              </span>
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Sin actividad aún.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

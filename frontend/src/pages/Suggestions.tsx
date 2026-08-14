@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useStore } from '../store'
+import { Sparkles, MessageCircle, CheckCircle2 } from 'lucide-react'
 import apiClient from '../api'
+import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import Spinner from '../components/ui/Spinner'
+import EmptyState from '../components/ui/EmptyState'
 
 interface Suggestion {
   id: number
@@ -12,8 +14,6 @@ interface Suggestion {
 }
 
 export default function Suggestions() {
-  const logout = useStore((state) => state.logout)
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [sentIds, setSentIds] = useState<Set<number>>(new Set())
 
@@ -37,11 +37,6 @@ export default function Suggestions() {
     },
   })
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
   const grouped = (suggestions || []).reduce((acc: Record<string, Suggestion[]>, s) => {
     acc[s.church] = acc[s.church] || []
     acc[s.church].push(s)
@@ -49,70 +44,61 @@ export default function Suggestions() {
   }, {})
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Sugerencias del Día</h1>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
-            >
-              Salir
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600 mb-4">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-accent" /> Sugerencias del Día
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4 text-sm text-muted-foreground">
             Estos son los hermanos sugeridos hoy para enviarles un mensaje de texto. La lista rota
             entre las tres iglesias sin repetir a nadie hasta completar el ciclo, y excluye
             automáticamente a quien ya haya sido contactado o agendado.
           </p>
 
           {isLoading ? (
-            <div className="py-12 text-center text-gray-500">Cargando...</div>
+            <Spinner />
           ) : !suggestions || suggestions.length === 0 ? (
-            <div className="py-12 text-center text-gray-500">
-              No hay sugerencias por ahora (puede que todos ya hayan sido contactados hoy).
-            </div>
+            <EmptyState
+              icon={Sparkles}
+              title="No hay sugerencias por ahora"
+              description="Puede que todos ya hayan sido contactados hoy."
+            />
           ) : (
             Object.entries(grouped).map(([church, list]) => (
-              <div key={church} className="mb-6">
-                <h3 className="font-semibold text-gray-800 mb-2">{church}</h3>
-                <ul className="divide-y divide-gray-200">
+              <div key={church} className="mb-6 last:mb-0">
+                <h3 className="mb-2 font-semibold text-foreground">{church}</h3>
+                <ul className="divide-y divide-border">
                   {list.map((s) => (
-                    <li key={s.id} className="py-3 flex items-center justify-between">
+                    <li key={s.id} className="flex items-center justify-between py-3">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                        <p className="text-xs text-gray-500">{s.phone || 'Sin teléfono registrado'}</p>
+                        <p className="text-sm font-medium text-foreground">{s.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.phone || 'Sin teléfono registrado'}
+                        </p>
                       </div>
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center gap-3">
                         {s.phone && (
                           <a
                             href={`https://wa.me/${s.phone.replace(/\D/g, '')}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-green-600 hover:underline text-sm"
+                            className="flex items-center gap-1 text-sm text-success hover:underline"
                           >
-                            WhatsApp
+                            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                           </a>
                         )}
                         {sentIds.has(s.id) ? (
-                          <span className="text-sm text-green-700">✓ Enviado</span>
+                          <span className="flex items-center gap-1 text-sm text-success">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Enviado
+                          </span>
                         ) : (
                           <button
                             onClick={() => markSent.mutate(s.id)}
                             disabled={markSent.isPending}
-                            className="text-sm text-purple-600 hover:underline disabled:opacity-50"
+                            className="text-sm text-accent hover:underline disabled:opacity-50"
                           >
                             Marcar como enviado
                           </button>
@@ -124,8 +110,8 @@ export default function Suggestions() {
               </div>
             ))
           )}
-        </div>
-      </main>
+        </CardContent>
+      </Card>
     </div>
   )
 }

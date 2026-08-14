@@ -1,8 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useStore } from '../store'
+import { Plus, CalendarPlus, MessageSquarePlus, Users } from 'lucide-react'
 import apiClient from '../api'
+import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
+import Spinner from '../components/ui/Spinner'
+import EmptyState from '../components/ui/EmptyState'
 
 interface Church {
   id: number
@@ -21,8 +26,10 @@ interface Member {
   church: { name: string }
 }
 
+const inputClass =
+  'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring'
+
 export default function Members() {
-  const logout = useStore((state) => state.logout)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -84,11 +91,6 @@ export default function Members() {
     },
   })
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) {
@@ -103,61 +105,39 @@ export default function Members() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Miembros</h1>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
-            >
-              Salir
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {showForm && (
-          <div className="bg-white rounded-lg shadow mb-6 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Nuevo Miembro</h2>
+    <div className="space-y-6">
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Nuevo Miembro</CardTitle>
+          </CardHeader>
+          <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <input
                   type="text"
                   placeholder="Nombre completo *"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2"
+                  className={inputClass}
                 />
                 <input
                   type="text"
                   placeholder="Teléfono"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2"
+                  className={inputClass}
                 />
                 <input
                   type="email"
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2"
+                  className={inputClass}
                 />
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2"
-                >
+                <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputClass}>
                   <option value="">Estatus espiritual...</option>
                   <option value="miembro-activo">Miembro activo</option>
                   <option value="miembro-inactivo">Miembro inactivo</option>
@@ -165,11 +145,7 @@ export default function Members() {
                   <option value="interesado">Interesado</option>
                 </select>
                 {needsChurchPicker && (
-                  <select
-                    value={churchId}
-                    onChange={(e) => setChurchId(e.target.value)}
-                    className="border border-gray-300 rounded px-3 py-2"
-                  >
+                  <select value={churchId} onChange={(e) => setChurchId(e.target.value)} className={inputClass}>
                     <option value="">Selecciona iglesia *...</option>
                     {churches?.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -180,131 +156,117 @@ export default function Members() {
                 )}
               </div>
 
-              <div className="flex space-x-2">
-                <button
-                  type="submit"
-                  disabled={createMember.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded disabled:opacity-50"
-                >
-                  {createMember.isPending ? 'Guardando...' : 'Guardar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
-                >
+              <div className="flex gap-2">
+                <Button type="submit" loading={createMember.isPending}>
+                  Guardar
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                   Cancelar
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      )}
 
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-wrap gap-3">
-            <h2 className="text-lg font-semibold text-gray-900">Lista de Miembros</h2>
-            <div className="flex items-center space-x-3">
-              {needsChurchPicker && (
-                <select
-                  value={filterChurchId}
-                  onChange={(e) => setFilterChurchId(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm"
-                >
-                  <option value="">Todas las iglesias</option>
-                  {churches?.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              )}
+      <Card>
+        <CardHeader className="flex-wrap gap-3">
+          <CardTitle>Lista de Miembros</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
+            {needsChurchPicker && (
               <select
-                value={filterVisited}
-                onChange={(e) => setFilterVisited(e.target.value)}
-                className="border border-gray-300 rounded px-3 py-2 text-sm"
+                value={filterChurchId}
+                onChange={(e) => setFilterChurchId(e.target.value)}
+                className={`${inputClass} w-auto text-sm`}
               >
-                <option value="">Visitados y no visitados</option>
-                <option value="visitado">Solo visitados</option>
-                <option value="no-visitado">Solo no visitados</option>
+                <option value="">Todas las iglesias</option>
+                {churches?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
-              >
-                + Nuevo Miembro
-              </button>
-            </div>
+            )}
+            <select
+              value={filterVisited}
+              onChange={(e) => setFilterVisited(e.target.value)}
+              className={`${inputClass} w-auto text-sm`}
+            >
+              <option value="">Visitados y no visitados</option>
+              <option value="visitado">Solo visitados</option>
+              <option value="no-visitado">Solo no visitados</option>
+            </select>
+            <Button size="sm" onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4" /> Nuevo Miembro
+            </Button>
           </div>
+        </CardHeader>
 
-          {isLoading ? (
-            <div className="px-6 py-12 text-center text-gray-500">Cargando...</div>
-          ) : filteredMembers.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-gray-500">
-                {filterChurchId ? 'No hay miembros en esta iglesia.' : 'No hay miembros registrados aún.'}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Nombre</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Teléfono</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Estatus</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Iglesia</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Último Contacto</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Visitado</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Última Visita</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredMembers.map((m) => (
-                    <tr key={m.id}>
-                      <td className="px-6 py-4 text-sm text-gray-900">{m.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{m.phone || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{m.email || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{m.status || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{m.church?.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {m.lastContact ? new Date(m.lastContact).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            m.lastVisit ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {m.lastVisit ? 'Visitado' : 'No visitado'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {m.lastVisit ? new Date(m.lastVisit).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm space-x-2">
+        {isLoading ? (
+          <Spinner />
+        ) : filteredMembers.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={filterChurchId ? 'No hay miembros en esta iglesia' : 'No hay miembros registrados aún'}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-border bg-muted/50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Nombre</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Teléfono</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Email</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Estatus</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Iglesia</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Último Contacto</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Visitado</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Última Visita</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredMembers.map((m) => (
+                  <tr key={m.id} className="transition-colors hover:bg-muted/40">
+                    <td className="px-5 py-4 text-sm font-medium text-foreground">{m.name}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{m.phone || '-'}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{m.email || '-'}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{m.status || '-'}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{m.church?.name}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">
+                      {m.lastContact ? new Date(m.lastContact).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-5 py-4 text-sm">
+                      <Badge variant={m.lastVisit ? 'success' : 'neutral'}>
+                        {m.lastVisit ? 'Visitado' : 'No visitado'}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">
+                      {m.lastVisit ? new Date(m.lastVisit).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-5 py-4 text-sm">
+                      <div className="flex items-center gap-3">
                         <button
                           onClick={() => navigate(`/visits?memberId=${m.id}`)}
-                          className="text-blue-600 hover:underline"
+                          className="flex items-center gap-1 text-primary hover:underline"
                         >
-                          Agendar visita
+                          <CalendarPlus className="h-3.5 w-3.5" /> Agendar
                         </button>
                         <button
                           onClick={() => navigate(`/contacts?memberId=${m.id}`)}
-                          className="text-purple-600 hover:underline"
+                          className="flex items-center gap-1 text-accent hover:underline"
                         >
-                          Registrar contacto
+                          <MessageSquarePlus className="h-3.5 w-3.5" /> Contacto
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </main>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </div>
   )
 }

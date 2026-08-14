@@ -1,9 +1,14 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useStore } from '../store'
+import { Plus, CalendarDays, Pencil, Check, X as XIcon } from 'lucide-react'
 import apiClient from '../api'
 import MemberPicker from '../components/MemberPicker'
+import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
+import Spinner from '../components/ui/Spinner'
+import EmptyState from '../components/ui/EmptyState'
 
 interface Church {
   id: number
@@ -33,10 +38,10 @@ const STATUS_LABEL: Record<string, string> = {
   cancelada: 'Cancelada',
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  pendiente: 'bg-yellow-100 text-yellow-800',
-  completada: 'bg-green-100 text-green-800',
-  cancelada: 'bg-red-100 text-red-800',
+const STATUS_VARIANT: Record<string, 'warning' | 'success' | 'destructive'> = {
+  pendiente: 'warning',
+  completada: 'success',
+  cancelada: 'destructive',
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -45,15 +50,16 @@ const TYPE_LABEL: Record<string, string> = {
   mensaje: 'Mensaje',
 }
 
-const TYPE_COLOR: Record<string, string> = {
-  visita: 'bg-blue-100 text-blue-800',
-  llamada: 'bg-purple-100 text-purple-800',
-  mensaje: 'bg-teal-100 text-teal-800',
+const TYPE_VARIANT: Record<string, 'primary' | 'accent' | 'neutral'> = {
+  visita: 'primary',
+  llamada: 'accent',
+  mensaje: 'neutral',
 }
 
+const inputClass =
+  'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring'
+
 export default function Visits() {
-  const logout = useStore((state) => state.logout)
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
 
@@ -139,11 +145,6 @@ export default function Visits() {
     },
   })
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!memberId) {
@@ -168,37 +169,17 @@ export default function Visits() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Agenda</h1>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
-            >
-              Salir
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {showForm && (
-          <div className="bg-white rounded-lg shadow mb-6 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {editingId ? 'Editar Pendiente' : 'Nuevo Pendiente'}
-            </h2>
+    <div className="space-y-6">
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingId ? 'Editar Pendiente' : 'Nuevo Pendiente'}</CardTitle>
+          </CardHeader>
+          <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <MemberPicker
                   members={members || []}
                   churches={churches || []}
@@ -206,11 +187,7 @@ export default function Visits() {
                   onChange={(id) => setMemberId(id)}
                   disabled={!!editingId}
                 />
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2"
-                >
+                <select value={type} onChange={(e) => setType(e.target.value)} className={inputClass}>
                   <option value="visita">Visita</option>
                   <option value="llamada">Llamada</option>
                   <option value="mensaje">Mensaje</option>
@@ -219,120 +196,108 @@ export default function Visits() {
                   type="datetime-local"
                   value={scheduledDate}
                   onChange={(e) => setScheduledDate(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2"
+                  className={inputClass}
                 />
                 <textarea
                   placeholder="Notas (opcional)"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 md:col-span-2"
+                  className={`${inputClass} md:col-span-2`}
                   rows={3}
                 />
               </div>
 
-              <div className="flex space-x-2">
-                <button
-                  type="submit"
-                  disabled={createVisit.isPending || updateVisit.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded disabled:opacity-50"
-                >
-                  {createVisit.isPending || updateVisit.isPending ? 'Guardando...' : 'Guardar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
-                >
+              <div className="flex gap-2">
+                <Button type="submit" loading={createVisit.isPending || updateVisit.isPending}>
+                  Guardar
+                </Button>
+                <Button type="button" variant="outline" onClick={resetForm}>
                   Cancelar
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      )}
 
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Próximos Pendientes</h2>
-            {!showForm && (
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
-              >
-                + Agendar
-              </button>
-            )}
-          </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Próximos Pendientes</CardTitle>
+          {!showForm && (
+            <Button size="sm" onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4" /> Agendar
+            </Button>
+          )}
+        </CardHeader>
 
-          {isLoading ? (
-            <div className="px-6 py-12 text-center text-gray-500">Cargando...</div>
-          ) : sortedVisits.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-gray-500">No hay nada agendado aún.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Miembro</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Tipo</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Fecha</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Asignado a</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Estatus</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Notas</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {sortedVisits.map((v) => (
-                    <tr key={v.id}>
-                      <td className="px-6 py-4 text-sm text-gray-900">{v.member?.name}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${TYPE_COLOR[v.type] || TYPE_COLOR.visita}`}>
-                          {TYPE_LABEL[v.type] || v.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(v.scheduledDate).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {v.user?.firstName} {v.user?.lastName}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${STATUS_COLOR[v.status]}`}>
-                          {STATUS_LABEL[v.status] || v.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{v.notes || '-'}</td>
-                      <td className="px-6 py-4 text-sm space-x-2">
-                        <button onClick={() => startEdit(v)} className="text-blue-600 hover:underline">
-                          Editar
+        {isLoading ? (
+          <Spinner />
+        ) : sortedVisits.length === 0 ? (
+          <EmptyState icon={CalendarDays} title="No hay nada agendado aún" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-border bg-muted/50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Miembro</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Tipo</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Fecha</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Asignado a</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Estatus</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Notas</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sortedVisits.map((v) => (
+                  <tr key={v.id} className="transition-colors hover:bg-muted/40">
+                    <td className="px-5 py-4 text-sm font-medium text-foreground">{v.member?.name}</td>
+                    <td className="px-5 py-4 text-sm">
+                      <Badge variant={TYPE_VARIANT[v.type] || 'neutral'}>{TYPE_LABEL[v.type] || v.type}</Badge>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">
+                      {new Date(v.scheduledDate).toLocaleString()}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">
+                      {v.user?.firstName} {v.user?.lastName}
+                    </td>
+                    <td className="px-5 py-4 text-sm">
+                      <Badge variant={STATUS_VARIANT[v.status]}>{STATUS_LABEL[v.status] || v.status}</Badge>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{v.notes || '-'}</td>
+                    <td className="px-5 py-4 text-sm">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => startEdit(v)}
+                          className="flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Editar
                         </button>
                         {v.status === 'pendiente' && (
                           <>
                             <button
                               onClick={() => updateStatus.mutate({ id: v.id, status: 'completada' })}
-                              className="text-green-700 hover:underline"
+                              className="flex items-center gap-1 text-success hover:underline"
                             >
-                              Completar
+                              <Check className="h-3.5 w-3.5" /> Completar
                             </button>
                             <button
                               onClick={() => updateStatus.mutate({ id: v.id, status: 'cancelada' })}
-                              className="text-red-700 hover:underline"
+                              className="flex items-center gap-1 text-destructive hover:underline"
                             >
-                              Cancelar
+                              <XIcon className="h-3.5 w-3.5" /> Cancelar
                             </button>
                           </>
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </main>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </div>
   )
 }

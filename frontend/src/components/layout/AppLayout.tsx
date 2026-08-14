@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { Home, Users, CalendarDays, MessageSquare, Sparkles, ListChecks, Moon, Sun, LogOut, HeartHandshake } from 'lucide-react'
 import { useStore } from '../../store'
 import { cn } from '../../lib/utils'
+import GlobalSearch from '../GlobalSearch'
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Inicio', icon: Home },
@@ -82,6 +83,7 @@ export default function AppLayout() {
           Hola, {user?.firstName || 'de nuevo'} 👋
         </div>
         <div className="flex items-center gap-2">
+          <GlobalSearch />
           <button
             onClick={toggleTheme}
             aria-label="Cambiar tema"

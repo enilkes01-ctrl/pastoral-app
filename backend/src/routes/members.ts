@@ -35,7 +35,7 @@ router.get('/', asyncHandler(async (req: AuthRequest, res) => {
         ? { name: { contains: String(search), mode: 'insensitive' as const } }
         : {}),
     },
-    include: { church: { select: { name: true } } },
+    include: { church: { select: { name: true } }, tags: { select: { id: true, name: true } } },
     orderBy: { name: 'asc' },
   });
 

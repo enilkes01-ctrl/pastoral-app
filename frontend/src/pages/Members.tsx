@@ -14,6 +14,11 @@ interface Church {
   name: string
 }
 
+interface Tag {
+  id: number
+  name: string
+}
+
 interface Member {
   id: number
   name: string
@@ -25,6 +30,7 @@ interface Member {
   followUpLevel: string
   churchId: number
   church: { name: string }
+  tags: Tag[]
 }
 
 const LEVEL_LABEL: Record<string, string> = { normal: 'Normal', prioritario: 'Prioritario', urgente: 'Urgente' }
@@ -50,6 +56,11 @@ export default function Members() {
   const [error, setError] = useState('')
   const [filterChurchId, setFilterChurchId] = useState('')
   const [filterVisited, setFilterVisited] = useState('')
+  const [filterLevel, setFilterLevel] = useState('')
+  const [filterTagId, setFilterTagId] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterNoContactDays, setFilterNoContactDays] = useState('')
+  const [search, setSearch] = useState('')
 
   const { data: members, isLoading } = useQuery<Member[]>({
     queryKey: ['members'],
@@ -62,12 +73,31 @@ export default function Members() {
   })
   const needsChurchPicker = (churches?.length ?? 0) > 1
 
+  const { data: tags } = useQuery<Tag[]>({
+    queryKey: ['tags'],
+    queryFn: async () => (await apiClient.get('/api/tags')).data,
+  })
+
   const filteredMembers = (members || [])
     .filter((m) => !filterChurchId || m.churchId === Number(filterChurchId))
     .filter((m) => {
       if (filterVisited === 'visitado') return !!m.lastVisit
       if (filterVisited === 'no-visitado') return !m.lastVisit
       return true
+    })
+    .filter((m) => !filterLevel || m.followUpLevel === filterLevel)
+    .filter((m) => !filterTagId || m.tags.some((t) => t.id === Number(filterTagId)))
+    .filter((m) => !filterStatus || m.status === filterStatus)
+    .filter((m) => {
+      if (!filterNoContactDays) return true
+      if (!m.lastContact) return true
+      const days = (Date.now() - new Date(m.lastContact).getTime()) / (1000 * 60 * 60 * 24)
+      return days > Number(filterNoContactDays)
+    })
+    .filter((m) => {
+      if (!search.trim()) return true
+      const q = search.trim().toLowerCase()
+      return m.name.toLowerCase().includes(q) || (m.phone || '').includes(q)
     })
     .slice()
     .sort((a, b) => {
@@ -181,6 +211,13 @@ export default function Members() {
         <CardHeader className="flex-wrap gap-3">
           <CardTitle>Lista de Miembros</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              placeholder="Buscar por nombre o teléfono..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`${inputClass} w-auto text-sm`}
+            />
             {needsChurchPicker && (
               <select
                 value={filterChurchId}
@@ -203,6 +240,50 @@ export default function Members() {
               <option value="">Visitados y no visitados</option>
               <option value="visitado">Solo visitados</option>
               <option value="no-visitado">Solo no visitados</option>
+            </select>
+            <select
+              value={filterLevel}
+              onChange={(e) => setFilterLevel(e.target.value)}
+              className={`${inputClass} w-auto text-sm`}
+            >
+              <option value="">Todos los niveles</option>
+              <option value="normal">Normal</option>
+              <option value="prioritario">Prioritario</option>
+              <option value="urgente">Urgente</option>
+            </select>
+            <select
+              value={filterTagId}
+              onChange={(e) => setFilterTagId(e.target.value)}
+              className={`${inputClass} w-auto text-sm`}
+            >
+              <option value="">Todas las etiquetas</option>
+              {tags?.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className={`${inputClass} w-auto text-sm`}
+            >
+              <option value="">Todos los estatus</option>
+              <option value="miembro-activo">Miembro activo</option>
+              <option value="miembro-inactivo">Miembro inactivo</option>
+              <option value="visitante">Visitante</option>
+              <option value="interesado">Interesado</option>
+            </select>
+            <select
+              value={filterNoContactDays}
+              onChange={(e) => setFilterNoContactDays(e.target.value)}
+              className={`${inputClass} w-auto text-sm`}
+            >
+              <option value="">Sin contacto hace más de...</option>
+              <option value="15">15 días</option>
+              <option value="30">30 días</option>
+              <option value="60">60 días</option>
+              <option value="90">90 días</option>
             </select>
             <Button size="sm" onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4" /> Nuevo Miembro

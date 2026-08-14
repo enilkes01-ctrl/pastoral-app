@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Users, CalendarPlus, MessageSquarePlus, Sparkles, BellRing, X, CheckCircle2, Clock, ListChecks, ListPlus } from 'lucide-react'
+import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LabelList } from 'recharts'
 import apiClient from '../api'
+import { useStore } from '../store'
 import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 
 interface Church {
@@ -13,6 +15,7 @@ interface Church {
 interface Member {
   id: number
   churchId: number
+  followUpLevel: string
 }
 
 interface Visit {
@@ -48,6 +51,12 @@ const TYPE_LABEL_PLURAL: Record<string, [string, string]> = {
   mensaje: ['mensaje', 'mensajes'],
 }
 
+// Trío categórico validado (CVD-seguro) para el gráfico de miembros por iglesia
+const CHURCH_COLORS_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a']
+const CHURCH_COLORS_DARK = ['#3987e5', '#d95926', '#199e70']
+
+const LEVEL_LABEL: Record<string, string> = { normal: 'Normal', prioritario: 'Prioritario', urgente: 'Urgente' }
+
 const QUICK_ACTIONS = [
   { to: '/members', label: 'Ver Miembros', icon: Users },
   { to: '/visits', label: 'Agendar', icon: CalendarPlus },
@@ -58,6 +67,7 @@ const QUICK_ACTIONS = [
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const theme = useStore((state) => state.theme)
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
   const { data: members } = useQuery<Member[]>({
@@ -135,6 +145,31 @@ export default function Dashboard() {
     tareasPendientes: (tasks || []).filter((t) => t.member?.churchId === c.id && t.status === 'pendiente').length,
   }))
 
+  const churchColors = theme === 'dark' ? CHURCH_COLORS_DARK : CHURCH_COLORS_LIGHT
+  const membersByChurchData = byChurch.map((row) => ({ name: row.church.name, miembros: row.members }))
+
+  const levelData = ['normal', 'prioritario', 'urgente'].map((level) => ({
+    name: LEVEL_LABEL[level],
+    value: (members || []).filter((m) => m.followUpLevel === level).length,
+    color:
+      level === 'normal'
+        ? 'hsl(var(--muted-foreground))'
+        : level === 'prioritario'
+          ? 'hsl(var(--warning))'
+          : 'hsl(var(--destructive))',
+  }))
+
+  const weeklyContacts = Array.from({ length: 8 }, (_, i) => {
+    const weeksAgo = 7 - i
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() - weeksAgo * 7)
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7)
+    const count = (contacts || []).filter((c) => {
+      const d = new Date(c.date)
+      return d >= start && d < end
+    }).length
+    return { label: `${start.getMonth() + 1}/${start.getDate()}`, contactos: count }
+  })
+
   return (
     <div className="space-y-6">
       {!bannerDismissed && pendingDue.length > 0 && (
@@ -201,6 +236,113 @@ export default function Dashboard() {
           </div>
         </Card>
       )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Miembros por Iglesia</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={membersByChurchData} margin={{ top: 16, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                  tickLine={false}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                />
+                <Bar dataKey="miembros" radius={[4, 4, 0, 0]}>
+                  {membersByChurchData.map((_, i) => (
+                    <Cell key={i} fill={churchColors[i % churchColors.length]} />
+                  ))}
+                  <LabelList dataKey="miembros" position="top" fill="hsl(var(--foreground))" fontSize={12} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Miembros por Nivel de Seguimiento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={levelData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={85} paddingAngle={2}>
+                  {levelData.map((d, i) => (
+                    <Cell key={i} fill={d.color} stroke="hsl(var(--card))" strokeWidth={2} />
+                  ))}
+                  <LabelList dataKey="value" position="inside" fill="hsl(var(--card))" fontSize={12} />
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                />
+                <Legend
+                  verticalAlign="bottom"
+                  formatter={(value) => <span style={{ color: 'hsl(var(--foreground))', fontSize: 12 }}>{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Contactos por Semana</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={weeklyContacts} margin={{ top: 16, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                axisLine={{ stroke: 'hsl(var(--border))' }}
+                tickLine={false}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+              />
+              <Bar dataKey="contactos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="contactos" position="top" fill="hsl(var(--foreground))" fontSize={12} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

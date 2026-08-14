@@ -3,6 +3,7 @@ import { Home, Users, CalendarDays, MessageSquare, Sparkles, ListChecks, Moon, S
 import { useStore } from '../../store'
 import { cn } from '../../lib/utils'
 import GlobalSearch from '../GlobalSearch'
+import NotificationBell from '../NotificationBell'
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Inicio', icon: Home },
@@ -83,6 +84,7 @@ export default function AppLayout() {
           Hola, {user?.firstName || 'de nuevo'} 👋
         </div>
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <GlobalSearch />
           <button
             onClick={toggleTheme}

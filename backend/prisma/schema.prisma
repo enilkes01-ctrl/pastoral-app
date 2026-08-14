@@ -183,6 +183,17 @@ model MessageSuggestion {
   @@map("message_suggestions")
 }
 
+model MessageTemplate {
+  id        Int      @id @default(autoincrement())
+  name      String
+  category  String   // bienvenida, seguimiento, oracion, cumpleanos, invitacion, otro
+  body      String   // texto con variable {nombre}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("message_templates")
+}
+
 model PreachingSchedule {
   id        Int       @id @default(autoincrement())
   date      DateTime

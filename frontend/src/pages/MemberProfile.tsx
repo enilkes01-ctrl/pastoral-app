@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import apiClient from '../api'
 import { useStore } from '../store'
+import WhatsAppButton from '../components/WhatsAppButton'
 import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
@@ -423,9 +424,12 @@ export default function MemberProfile() {
             )}
           </div>
 
-          <Button variant="outline" size="sm" onClick={startEditProfile}>
-            <Pencil className="h-4 w-4" /> Editar perfil
-          </Button>
+          <div className="flex items-center gap-3">
+            <WhatsAppButton phone={member.phone} name={member.name} />
+            <Button variant="outline" size="sm" onClick={startEditProfile}>
+              <Pencil className="h-4 w-4" /> Editar perfil
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

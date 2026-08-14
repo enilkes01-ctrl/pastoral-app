@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, MessageSquare, Pencil, X as XIcon } from 'lucide-react'
 import apiClient from '../api'
 import MemberPicker from '../components/MemberPicker'
+import WhatsAppButton from '../components/WhatsAppButton'
 import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
@@ -18,6 +19,7 @@ interface Church {
 interface Member {
   id: number
   name: string
+  phone: string | null
   churchId: number
 }
 
@@ -55,6 +57,7 @@ export default function Contacts() {
   const [showForm, setShowForm] = useState(!!searchParams.get('memberId'))
   const [editingId, setEditingId] = useState<number | null>(null)
   const [memberId, setMemberId] = useState(searchParams.get('memberId') || '')
+  const [quickMemberId, setQuickMemberId] = useState('')
   const [type, setType] = useState('')
   const [date, setDate] = useState('')
   const [notes, setNotes] = useState('')
@@ -186,8 +189,37 @@ export default function Contacts() {
     }
   }
 
+  const quickMember = (members || []).find((m) => String(m.id) === quickMemberId)
+
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Enviar Mensaje Rápido</CardTitle>
+          <Link to="/templates" className="text-sm text-primary hover:underline">
+            Gestionar plantillas
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <MemberPicker
+              members={members || []}
+              churches={churches || []}
+              value={quickMemberId}
+              onChange={(id) => setQuickMemberId(id)}
+            />
+          </div>
+          {quickMember && (
+            <div className="mt-3">
+              <WhatsAppButton phone={quickMember.phone} name={quickMember.name} />
+              {!quickMember.phone && (
+                <p className="text-sm text-muted-foreground">Este miembro no tiene teléfono registrado.</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {showForm && (
         <Card>
           <CardHeader>

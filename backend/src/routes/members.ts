@@ -53,6 +53,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res) => {
       visits: { orderBy: { scheduledDate: 'desc' }, take: 15, include: { user: { select: { firstName: true, lastName: true } } } },
       tags: true,
       tasks: { orderBy: { createdAt: 'desc' }, take: 15, include: { user: { select: { firstName: true, lastName: true } } } },
+      familyGroup: { include: { members: { select: { id: true, name: true, phone: true, churchId: true } } } },
     },
   });
 
@@ -219,6 +220,52 @@ router.delete('/:id/tags/:tagId', asyncHandler(async (req: AuthRequest, res) => 
     where: { id: member.id },
     data: { tags: { disconnect: { id: Number(req.params.tagId) } } },
   });
+  res.status(204).send();
+}));
+
+// Núcleo familiar (vínculo entre miembros reales, distinto de "Familia")
+router.post('/:id/family-group/:otherId', asyncHandler(async (req: AuthRequest, res) => {
+  const member = await findAccessibleMember(req, Number(req.params.id));
+  const other = await findAccessibleMember(req, Number(req.params.otherId));
+  if (!member || !other) return res.status(404).json({ error: 'Miembro no encontrado' });
+  if (member.id === other.id) {
+    return res.status(400).json({ error: 'No puedes vincular un miembro consigo mismo' });
+  }
+  if (member.familyGroupId && other.familyGroupId && member.familyGroupId !== other.familyGroupId) {
+    return res.status(409).json({
+      error: 'Ese miembro ya pertenece a otro núcleo familiar. Quítalo primero de su núcleo actual.',
+    });
+  }
+
+  let groupId = member.familyGroupId || other.familyGroupId;
+  if (!groupId) {
+    const group = await prisma.familyGroup.create({ data: {} });
+    groupId = group.id;
+  }
+
+  await prisma.member.updateMany({
+    where: { id: { in: [member.id, other.id] } },
+    data: { familyGroupId: groupId },
+  });
+
+  res.status(204).send();
+}));
+
+router.delete('/:id/family-group', asyncHandler(async (req: AuthRequest, res) => {
+  const member = await findAccessibleMember(req, Number(req.params.id));
+  if (!member || !member.familyGroupId) {
+    return res.status(404).json({ error: 'Miembro no encontrado o sin núcleo familiar' });
+  }
+
+  const groupId = member.familyGroupId;
+  await prisma.member.update({ where: { id: member.id }, data: { familyGroupId: null } });
+
+  const remaining = await prisma.member.count({ where: { familyGroupId: groupId } });
+  if (remaining < 2) {
+    await prisma.member.updateMany({ where: { familyGroupId: groupId }, data: { familyGroupId: null } });
+    await prisma.familyGroup.delete({ where: { id: groupId } });
+  }
+
   res.status(204).send();
 }));
 

@@ -76,8 +76,19 @@ model Member {
   suggestions   MessageSuggestion[]
   tags          Tag[]     @relation("MemberTags")
   tasks         Task[]
+  familyGroupId Int?
+  familyGroup   FamilyGroup? @relation(fields: [familyGroupId], references: [id])
 
   @@map("members")
+}
+
+model FamilyGroup {
+  id        Int      @id @default(autoincrement())
+  members   Member[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("family_groups")
 }
 
 model Tag {

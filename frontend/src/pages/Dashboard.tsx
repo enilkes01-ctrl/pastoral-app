@@ -5,8 +5,14 @@ import { Users, CalendarPlus, MessageSquarePlus, Sparkles, BellRing, X, CheckCir
 import apiClient from '../api'
 import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 
+interface Church {
+  id: number
+  name: string
+}
+
 interface Member {
   id: number
+  churchId: number
 }
 
 interface Visit {
@@ -14,7 +20,7 @@ interface Visit {
   type: string
   status: string
   scheduledDate: string
-  member: { name: string }
+  member: { name: string; churchId: number }
 }
 
 interface Contact {
@@ -27,6 +33,7 @@ interface Contact {
 interface Task {
   id: number
   status: string
+  member: { churchId: number }
 }
 
 const CONTACT_TYPE_LABEL: Record<string, string> = {
@@ -73,6 +80,11 @@ export default function Dashboard() {
     queryFn: async () => (await apiClient.get('/api/tasks')).data,
   })
 
+  const { data: churches } = useQuery<Church[]>({
+    queryKey: ['churches'],
+    queryFn: async () => (await apiClient.get('/api/churches')).data,
+  })
+
   const totalMembers = members?.length ?? 0
   const visitasPendientes = visits?.filter((v) => v.status === 'pendiente').length ?? 0
   const visitasRealizadas = visits?.filter((v) => v.status === 'completada').length ?? 0
@@ -115,6 +127,14 @@ export default function Dashboard() {
     { label: 'Tareas pendientes', value: tareasPendientes, icon: ListChecks, color: 'text-accent bg-accent/15' },
   ]
 
+  const byChurch = (churches || []).map((c) => ({
+    church: c,
+    members: (members || []).filter((m) => m.churchId === c.id).length,
+    visitasPendientes: (visits || []).filter((v) => v.member?.churchId === c.id && v.status === 'pendiente').length,
+    visitasRealizadas: (visits || []).filter((v) => v.member?.churchId === c.id && v.status === 'completada').length,
+    tareasPendientes: (tasks || []).filter((t) => t.member?.churchId === c.id && t.status === 'pendiente').length,
+  }))
+
   return (
     <div className="space-y-6">
       {!bannerDismissed && pendingDue.length > 0 && (
@@ -149,6 +169,38 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {byChurch.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Panorama por Iglesia</CardTitle>
+          </CardHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-border bg-muted/50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Iglesia</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Miembros</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Visitas pendientes</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Visitas realizadas</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-foreground">Tareas pendientes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {byChurch.map((row) => (
+                  <tr key={row.church.id} className="transition-colors hover:bg-muted/40">
+                    <td className="px-5 py-4 text-sm font-medium text-foreground">{row.church.name}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{row.members}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{row.visitasPendientes}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{row.visitasRealizadas}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">{row.tareasPendientes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

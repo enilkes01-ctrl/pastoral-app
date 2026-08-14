@@ -24,6 +24,7 @@ import {
 import apiClient from '../api'
 import { useStore } from '../store'
 import WhatsAppButton from '../components/WhatsAppButton'
+import MemberPicker from '../components/MemberPicker'
 import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
@@ -48,6 +49,17 @@ interface TagT {
   id: number
   name: string
   color: string | null
+}
+
+interface Church {
+  id: number
+  name: string
+}
+
+interface MemberLite {
+  id: number
+  name: string
+  churchId: number
 }
 
 interface TimelineEntry {
@@ -104,6 +116,7 @@ interface MemberDetail {
   }>
   tags: TagT[]
   tasks: TaskEntry[]
+  familyGroup: { members: MemberLite[] } | null
 }
 
 const LEVEL_LABEL: Record<string, string> = { normal: 'Normal', prioritario: 'Prioritario', urgente: 'Urgente' }
@@ -189,6 +202,10 @@ export default function MemberProfile() {
   const [editingNeedId, setEditingNeedId] = useState<number | null>(null)
   const [needForm, setNeedForm] = useState({ description: '', priority: '' })
 
+  const [showFamilyGroupPicker, setShowFamilyGroupPicker] = useState(false)
+  const [familyGroupPick, setFamilyGroupPick] = useState('')
+  const [familyGroupError, setFamilyGroupError] = useState('')
+
   const { data: member, isLoading } = useQuery<MemberDetail>({
     queryKey: ['member', id],
     queryFn: async () => (await apiClient.get(`/api/members/${id}`)).data,
@@ -197,6 +214,16 @@ export default function MemberProfile() {
   const { data: tags } = useQuery<TagT[]>({
     queryKey: ['tags'],
     queryFn: async () => (await apiClient.get('/api/tags')).data,
+  })
+
+  const { data: allMembers } = useQuery<MemberLite[]>({
+    queryKey: ['members'],
+    queryFn: async () => (await apiClient.get('/api/members')).data,
+  })
+
+  const { data: churches } = useQuery<Church[]>({
+    queryKey: ['churches'],
+    queryFn: async () => (await apiClient.get('/api/churches')).data,
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['member', id] })
@@ -274,6 +301,23 @@ export default function MemberProfile() {
     onSuccess: invalidate,
   })
 
+  const linkFamilyMember = useMutation({
+    mutationFn: async (otherId: number) => apiClient.post(`/api/members/${id}/family-group/${otherId}`),
+    onSuccess: () => {
+      invalidate()
+      setShowFamilyGroupPicker(false)
+      setFamilyGroupPick('')
+    },
+    onError: (err: any) => {
+      setFamilyGroupError(err.response?.data?.error || 'Error al vincular')
+      setFamilyGroupPick('')
+    },
+  })
+  const unlinkFamilyMember = useMutation({
+    mutationFn: async (otherId: number) => apiClient.delete(`/api/members/${otherId}/family-group`),
+    onSuccess: invalidate,
+  })
+
   if (isLoading) return <Spinner />
   if (!member) return <EmptyState icon={Users} title="Miembro no encontrado" />
 
@@ -306,6 +350,12 @@ export default function MemberProfile() {
     (t) => !assignedTagIds.has(t.id) && t.name.toLowerCase().includes(tagSearch.toLowerCase())
   )
   const exactTagMatch = (tags || []).some((t) => t.name.toLowerCase() === tagSearch.trim().toLowerCase())
+
+  const linkedFamilyMembers = (member.familyGroup?.members || []).filter((m) => m.id !== member.id)
+  const linkedFamilyIds = new Set((member.familyGroup?.members || []).map((m) => m.id))
+  const availableFamilyGroupMembers = (allMembers || []).filter(
+    (m) => m.id !== member.id && !linkedFamilyIds.has(m.id)
+  )
 
   const timeline: TimelineEntry[] = [
     ...member.contacts.map((c) => ({ ...c, kind: 'contact' as const, date: c.date })),
@@ -746,6 +796,75 @@ export default function MemberProfile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Núcleo Familiar */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Núcleo Familiar</CardTitle>
+          {!showFamilyGroupPicker && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setShowFamilyGroupPicker(true)
+                setFamilyGroupError('')
+              }}
+            >
+              <Plus className="h-4 w-4" /> Agregar al núcleo
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {familyGroupError && <p className="text-sm text-destructive">{familyGroupError}</p>}
+
+          {showFamilyGroupPicker && (
+            <div className="rounded-lg border border-border p-3">
+              <MemberPicker
+                members={availableFamilyGroupMembers}
+                churches={churches || []}
+                value={familyGroupPick}
+                onChange={(pickedId) => {
+                  setFamilyGroupPick(pickedId)
+                  if (pickedId) linkFamilyMember.mutate(Number(pickedId))
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => {
+                  setShowFamilyGroupPicker(false)
+                  setFamilyGroupPick('')
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          )}
+
+          {linkedFamilyMembers.length === 0 && !showFamilyGroupPicker ? (
+            <p className="text-sm text-muted-foreground">Sin núcleo familiar vinculado.</p>
+          ) : (
+            linkedFamilyMembers.map((m) => (
+              <div key={m.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                <button
+                  onClick={() => navigate(`/members/${m.id}`)}
+                  className="text-sm font-medium text-foreground hover:text-primary hover:underline"
+                >
+                  {m.name}
+                </button>
+                <button
+                  className="text-xs text-destructive hover:underline"
+                  onClick={() => unlinkFamilyMember.mutate(m.id)}
+                >
+                  Quitar
+                </button>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       {/* Línea de tiempo */}
       <Card>

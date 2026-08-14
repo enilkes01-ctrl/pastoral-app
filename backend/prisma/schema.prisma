@@ -38,6 +38,7 @@ model Church {
   members  Member[]
   users    User[]    @relation("UserHomeChurch")
   usersWithAccess User[] @relation("UserChurchAccess")
+  preachings PreachingSchedule[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -199,6 +200,8 @@ model PreachingSchedule {
   date      DateTime
   title     String
   location  String?
+  churchId  Int
+  church    Church    @relation(fields: [churchId], references: [id])
   assignedTo Int
   user      User      @relation(fields: [assignedTo], references: [id])
   createdAt DateTime  @default(now())

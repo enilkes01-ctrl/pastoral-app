@@ -4,7 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Members from './pages/Members'
 import MemberProfile from './pages/MemberProfile'
-import Visits from './pages/Visits'
+import Agenda from './pages/Agenda'
 import Contacts from './pages/Contacts'
 import Suggestions from './pages/Suggestions'
 import Tasks from './pages/Tasks'
@@ -27,7 +27,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/members" element={<Members />} />
               <Route path="/members/:id" element={<MemberProfile />} />
-              <Route path="/visits" element={<Visits />} />
+              <Route path="/visits" element={<Agenda />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/suggestions" element={<Suggestions />} />
               <Route path="/tasks" element={<Tasks />} />

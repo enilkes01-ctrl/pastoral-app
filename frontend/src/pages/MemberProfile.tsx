@@ -19,6 +19,7 @@ import {
   PhoneCall,
   Home,
   CheckCircle2,
+  ListChecks,
 } from 'lucide-react'
 import apiClient from '../api'
 import { useStore } from '../store'
@@ -50,11 +51,23 @@ interface TagT {
 
 interface TimelineEntry {
   id: number
-  kind: 'contact' | 'visit'
+  kind: 'contact' | 'visit' | 'task'
   type: string
   date: string
   status?: string
   notes: string | null
+  outcome?: string | null
+  commitments?: string | null
+  user: { firstName: string | null; lastName: string | null }
+}
+
+interface TaskEntry {
+  id: number
+  type: string
+  description: string | null
+  dueDate: string | null
+  status: string
+  createdAt: string
   user: { firstName: string | null; lastName: string | null }
 }
 
@@ -77,8 +90,19 @@ interface MemberDetail {
   families: FamilyMember[]
   needs: Need[]
   contacts: Array<{ id: number; type: string; date: string; notes: string | null; user: { firstName: string | null; lastName: string | null } }>
-  visits: Array<{ id: number; type: string; scheduledDate: string; status: string; notes: string | null; user: { firstName: string | null; lastName: string | null } }>
+  visits: Array<{
+    id: number
+    type: string
+    scheduledDate: string
+    status: string
+    notes: string | null
+    outcome: string | null
+    topics: string | null
+    commitments: string | null
+    user: { firstName: string | null; lastName: string | null }
+  }>
   tags: TagT[]
+  tasks: TaskEntry[]
 }
 
 const LEVEL_LABEL: Record<string, string> = { normal: 'Normal', prioritario: 'Prioritario', urgente: 'Urgente' }
@@ -88,6 +112,24 @@ const LEVEL_VARIANT: Record<string, 'neutral' | 'warning' | 'destructive'> = {
   urgente: 'destructive',
 }
 const TYPE_LABEL: Record<string, string> = { visita: 'Visita', llamada: 'Llamada', mensaje: 'Mensaje' }
+const OUTCOME_LABEL: Record<string, string> = {
+  contactado: 'Contactado',
+  'no-respondio': 'No respondió',
+  'solicita-visita': 'Solicita visita',
+  'necesita-oracion': 'Necesita oración',
+  'requiere-seguimiento': 'Requiere seguimiento',
+  'situacion-resuelta': 'Situación resuelta',
+  otro: 'Otro',
+}
+const TASK_TYPE_LABEL: Record<string, string> = {
+  'volver-a-visitar': 'Volver a visitar',
+  llamar: 'Llamar',
+  'enviar-material': 'Enviar material',
+  'coordinar-ayuda': 'Coordinar ayuda',
+  'contactar-anciano': 'Contactar anciano',
+  orar: 'Orar',
+  personalizada: 'Personalizada',
+}
 const STATUS_LABEL: Record<string, string> = { pendiente: 'Pendiente', completada: 'Completada', cancelada: 'Cancelada' }
 const STATUS_VARIANT: Record<string, 'warning' | 'success' | 'destructive'> = {
   pendiente: 'warning',
@@ -266,7 +308,21 @@ export default function MemberProfile() {
 
   const timeline: TimelineEntry[] = [
     ...member.contacts.map((c) => ({ ...c, kind: 'contact' as const, date: c.date })),
-    ...member.visits.map((v) => ({ ...v, kind: 'visit' as const, date: v.scheduledDate })),
+    ...member.visits.map((v) => ({
+      ...v,
+      kind: 'visit' as const,
+      date: v.scheduledDate,
+      notes: v.notes || v.topics,
+    })),
+    ...member.tasks.map((t) => ({
+      id: t.id,
+      kind: 'task' as const,
+      type: t.type,
+      date: t.dueDate || t.createdAt,
+      status: t.status,
+      notes: t.description,
+      user: t.user,
+    })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   return (
@@ -700,20 +756,35 @@ export default function MemberProfile() {
           ) : (
             <ol className="space-y-4 border-l border-border pl-4">
               {timeline.map((entry) => {
-                const Icon = entry.type === 'llamada' ? PhoneCall : entry.type === 'mensaje' ? MessageSquare : Users
+                const Icon =
+                  entry.kind === 'task'
+                    ? ListChecks
+                    : entry.type === 'llamada'
+                      ? PhoneCall
+                      : entry.type === 'mensaje'
+                        ? MessageSquare
+                        : Users
+                const label = entry.kind === 'task' ? TASK_TYPE_LABEL[entry.type] || entry.type : TYPE_LABEL[entry.type] || entry.type
                 return (
                   <li key={`${entry.kind}-${entry.id}`} className="relative">
                     <span className="absolute -left-[21px] flex h-4 w-4 items-center justify-center rounded-full bg-primary">
                       <Icon className="h-2.5 w-2.5 text-primary-foreground" />
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">{TYPE_LABEL[entry.type] || entry.type}</span>
-                      {entry.kind === 'visit' && entry.status && (
+                      <span className="text-sm font-medium text-foreground">{label}</span>
+                      {(entry.kind === 'visit' || entry.kind === 'task') && entry.status && (
                         <Badge variant={STATUS_VARIANT[entry.status]}>{STATUS_LABEL[entry.status]}</Badge>
                       )}
+                      {entry.outcome && <Badge variant="accent">{OUTCOME_LABEL[entry.outcome] || entry.outcome}</Badge>}
                       <span className="text-xs text-muted-foreground">{new Date(entry.date).toLocaleString()}</span>
                     </div>
                     {entry.notes && <p className="mt-1 text-sm text-muted-foreground">{entry.notes}</p>}
+                    {entry.commitments && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        <span className="font-medium">Compromiso: </span>
+                        {entry.commitments}
+                      </p>
+                    )}
                     <p className="mt-1 text-xs text-muted-foreground">
                       {entry.user?.firstName} {entry.user?.lastName}
                     </p>

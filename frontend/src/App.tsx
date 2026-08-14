@@ -7,6 +7,7 @@ import MemberProfile from './pages/MemberProfile'
 import Visits from './pages/Visits'
 import Contacts from './pages/Contacts'
 import Suggestions from './pages/Suggestions'
+import Tasks from './pages/Tasks'
 import ProtectedRoute from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 
@@ -28,6 +29,7 @@ function App() {
               <Route path="/visits" element={<Visits />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/suggestions" element={<Suggestions />} />
+              <Route path="/tasks" element={<Tasks />} />
             </Route>
           </Route>
 

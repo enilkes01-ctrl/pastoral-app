@@ -24,6 +24,15 @@ router.get('/', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 const VALID_TYPES = ['visita', 'llamada', 'mensaje'];
+const VALID_OUTCOMES = [
+  'contactado',
+  'no-respondio',
+  'solicita-visita',
+  'necesita-oracion',
+  'requiere-seguimiento',
+  'situacion-resuelta',
+  'otro',
+];
 
 // Recalcula la fecha de la última visita completada de un miembro
 async function recalcLastVisit(memberId: number) {
@@ -76,9 +85,12 @@ router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
   });
   if (!visit) return res.status(404).json({ error: 'Visita no encontrada' });
 
-  const { status, type, notes, scheduledDate } = req.body;
+  const { status, type, notes, scheduledDate, outcome, topics, commitments } = req.body;
   if (type && !VALID_TYPES.includes(type)) {
     return res.status(400).json({ error: 'Tipo inválido' });
+  }
+  if (outcome && !VALID_OUTCOMES.includes(outcome)) {
+    return res.status(400).json({ error: 'Resultado inválido' });
   }
 
   const updated = await prisma.visitSchedule.update({
@@ -88,6 +100,9 @@ router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
       type,
       notes,
       scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
+      outcome,
+      topics,
+      commitments,
     },
   });
 

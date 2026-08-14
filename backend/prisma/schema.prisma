@@ -26,6 +26,7 @@ model User {
   visits         VisitSchedule[]
   sermons        PreachingSchedule[]
   suggestionsFor MessageSuggestion[]
+  tasks          Task[]
 
   @@map("users")
 }
@@ -73,6 +74,7 @@ model Member {
   visits        VisitSchedule[]
   suggestions   MessageSuggestion[]
   tags          Tag[]     @relation("MemberTags")
+  tasks         Task[]
 
   @@map("members")
 }
@@ -138,12 +140,35 @@ model VisitSchedule {
   scheduledDate DateTime
   status        String    @default("pendiente") // pendiente, completada, cancelada
   notes         String?
+  outcome       String?   // solo llamadas: contactado, no-respondio, solicita-visita, necesita-oracion, requiere-seguimiento, situacion-resuelta, otro
+  topics        String?   // temas tratados / observaciones del cierre
+  commitments   String?   // compromisos asumidos
   assignedTo    Int
   user          User      @relation(fields: [assignedTo], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  followUpTasks Task[]
+
   @@map("visit_schedule")
+}
+
+model Task {
+  id             Int       @id @default(autoincrement())
+  memberId       Int
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  type           String    // volver-a-visitar, llamar, enviar-material, coordinar-ayuda, contactar-anciano, orar, personalizada
+  description    String?
+  dueDate        DateTime?
+  status         String    @default("pendiente") // pendiente, completada
+  relatedVisitId Int?
+  relatedVisit   VisitSchedule? @relation(fields: [relatedVisitId], references: [id], onDelete: SetNull)
+  assignedTo     Int
+  user           User      @relation(fields: [assignedTo], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("tasks")
 }
 
 model MessageSuggestion {

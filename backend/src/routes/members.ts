@@ -52,6 +52,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res) => {
       contacts: { orderBy: { date: 'desc' }, take: 15, include: { user: { select: { firstName: true, lastName: true } } } },
       visits: { orderBy: { scheduledDate: 'desc' }, take: 15, include: { user: { select: { firstName: true, lastName: true } } } },
       tags: true,
+      tasks: { orderBy: { createdAt: 'desc' }, take: 15, include: { user: { select: { firstName: true, lastName: true } } } },
     },
   });
 

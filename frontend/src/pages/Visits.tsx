@@ -10,6 +10,26 @@ import Badge from '../components/ui/Badge'
 import Spinner from '../components/ui/Spinner'
 import EmptyState from '../components/ui/EmptyState'
 
+const OUTCOME_LABEL: Record<string, string> = {
+  contactado: 'Contactado',
+  'no-respondio': 'No respondió',
+  'solicita-visita': 'Solicita visita',
+  'necesita-oracion': 'Necesita oración',
+  'requiere-seguimiento': 'Requiere seguimiento',
+  'situacion-resuelta': 'Situación resuelta',
+  otro: 'Otro',
+}
+
+const TASK_TYPE_LABEL: Record<string, string> = {
+  'volver-a-visitar': 'Volver a visitar',
+  llamar: 'Llamar',
+  'enviar-material': 'Enviar material',
+  'coordinar-ayuda': 'Coordinar ayuda',
+  'contactar-anciano': 'Contactar anciano',
+  orar: 'Orar',
+  personalizada: 'Personalizada',
+}
+
 interface Church {
   id: number
   name: string
@@ -28,6 +48,9 @@ interface Visit {
   scheduledDate: string
   status: string
   notes: string | null
+  outcome: string | null
+  topics: string | null
+  commitments: string | null
   member: { name: string; phone: string | null }
   user: { firstName: string | null; lastName: string | null }
 }
@@ -71,6 +94,16 @@ export default function Visits() {
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
 
+  const [closingVisit, setClosingVisit] = useState<Visit | null>(null)
+  const [outcome, setOutcome] = useState('')
+  const [topics, setTopics] = useState('')
+  const [commitments, setCommitments] = useState('')
+  const [createTask, setCreateTask] = useState(false)
+  const [taskType, setTaskType] = useState('volver-a-visitar')
+  const [taskDescription, setTaskDescription] = useState('')
+  const [taskDueDate, setTaskDueDate] = useState('')
+  const [closeError, setCloseError] = useState('')
+
   const resetForm = () => {
     setShowForm(false)
     setEditingId(null)
@@ -81,6 +114,31 @@ export default function Visits() {
     setError('')
   }
 
+  const startClose = (v: Visit) => {
+    setShowForm(false)
+    setClosingVisit(v)
+    setOutcome('')
+    setTopics('')
+    setCommitments('')
+    setCreateTask(false)
+    setTaskType('volver-a-visitar')
+    setTaskDescription('')
+    setTaskDueDate('')
+    setCloseError('')
+  }
+
+  const resetClose = () => {
+    setClosingVisit(null)
+    setOutcome('')
+    setTopics('')
+    setCommitments('')
+    setCreateTask(false)
+    setTaskType('volver-a-visitar')
+    setTaskDescription('')
+    setTaskDueDate('')
+    setCloseError('')
+  }
+
   // datetime-local necesita "YYYY-MM-DDTHH:mm" en hora local, sin segundos ni zona
   const toDatetimeLocal = (isoDate: string) => {
     const d = new Date(isoDate)
@@ -89,6 +147,7 @@ export default function Visits() {
   }
 
   const startEdit = (v: Visit) => {
+    setClosingVisit(null)
     setEditingId(v.id)
     setMemberId(String(v.memberId))
     setType(v.type)
@@ -142,6 +201,35 @@ export default function Visits() {
       (await apiClient.put(`/api/visits/${id}`, { status })).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visits'] })
+    },
+  })
+
+  const closeVisit = useMutation({
+    mutationFn: async () => {
+      if (!closingVisit) return
+      await apiClient.put(`/api/visits/${closingVisit.id}`, {
+        status: 'completada',
+        outcome: closingVisit.type === 'llamada' ? outcome || undefined : undefined,
+        topics: topics || undefined,
+        commitments: commitments || undefined,
+      })
+      if (createTask) {
+        await apiClient.post('/api/tasks', {
+          memberId: closingVisit.memberId,
+          type: taskType,
+          description: taskDescription || undefined,
+          dueDate: taskDueDate || undefined,
+          relatedVisitId: closingVisit.id,
+        })
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      resetClose()
+    },
+    onError: (err: any) => {
+      setCloseError(err.response?.data?.error || 'Error al cerrar')
     },
   })
 
@@ -220,11 +308,107 @@ export default function Visits() {
         </Card>
       )}
 
+      {closingVisit && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Completar {TYPE_LABEL[closingVisit.type] || closingVisit.type} — {closingVisit.member?.name}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                closeVisit.mutate()
+              }}
+              className="space-y-4"
+            >
+              {closeError && <p className="text-sm text-destructive">{closeError}</p>}
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {closingVisit.type === 'llamada' && (
+                  <select value={outcome} onChange={(e) => setOutcome(e.target.value)} className={inputClass}>
+                    <option value="">Resultado de la llamada...</option>
+                    {Object.entries(OUTCOME_LABEL).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <textarea
+                  placeholder="Temas tratados / observaciones (opcional)"
+                  value={topics}
+                  onChange={(e) => setTopics(e.target.value)}
+                  className={`${inputClass} md:col-span-2`}
+                  rows={2}
+                />
+                <textarea
+                  placeholder="Compromisos asumidos (opcional)"
+                  value={commitments}
+                  onChange={(e) => setCommitments(e.target.value)}
+                  className={`${inputClass} md:col-span-2`}
+                  rows={2}
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={createTask}
+                  onChange={(e) => setCreateTask(e.target.checked)}
+                  className="h-4 w-4 rounded border-input"
+                />
+                Crear tarea de seguimiento
+              </label>
+
+              {createTask && (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <select value={taskType} onChange={(e) => setTaskType(e.target.value)} className={inputClass}>
+                    {Object.entries(TASK_TYPE_LABEL).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="date"
+                    value={taskDueDate}
+                    onChange={(e) => setTaskDueDate(e.target.value)}
+                    className={inputClass}
+                  />
+                  <textarea
+                    placeholder="Descripción de la tarea (opcional)"
+                    value={taskDescription}
+                    onChange={(e) => setTaskDescription(e.target.value)}
+                    className={`${inputClass} md:col-span-2`}
+                    rows={2}
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button type="submit" loading={closeVisit.isPending}>
+                  Completar
+                </Button>
+                <Button type="button" variant="outline" onClick={resetClose}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Próximos Pendientes</CardTitle>
           {!showForm && (
-            <Button size="sm" onClick={() => setShowForm(true)}>
+            <Button
+              size="sm"
+              onClick={() => {
+                setClosingVisit(null)
+                setShowForm(true)
+              }}
+            >
               <Plus className="h-4 w-4" /> Agendar
             </Button>
           )}
@@ -264,7 +448,14 @@ export default function Visits() {
                     <td className="px-5 py-4 text-sm">
                       <Badge variant={STATUS_VARIANT[v.status]}>{STATUS_LABEL[v.status] || v.status}</Badge>
                     </td>
-                    <td className="px-5 py-4 text-sm text-muted-foreground">{v.notes || '-'}</td>
+                    <td className="px-5 py-4 text-sm text-muted-foreground">
+                      {v.outcome && (
+                        <Badge variant="accent" className="mb-1">
+                          {OUTCOME_LABEL[v.outcome] || v.outcome}
+                        </Badge>
+                      )}
+                      <div>{v.notes || v.topics || '-'}</div>
+                    </td>
                     <td className="px-5 py-4 text-sm">
                       <div className="flex items-center gap-3">
                         <button
@@ -276,7 +467,7 @@ export default function Visits() {
                         {v.status === 'pendiente' && (
                           <>
                             <button
-                              onClick={() => updateStatus.mutate({ id: v.id, status: 'completada' })}
+                              onClick={() => startClose(v)}
                               className="flex items-center gap-1 text-success hover:underline"
                             >
                               <Check className="h-3.5 w-3.5" /> Completar

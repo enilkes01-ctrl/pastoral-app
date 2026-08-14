@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Users, CalendarPlus, MessageSquarePlus, Sparkles, BellRing, X, CheckCircle2, Clock } from 'lucide-react'
+import { Users, CalendarPlus, MessageSquarePlus, Sparkles, BellRing, X, CheckCircle2, Clock, ListChecks, ListPlus } from 'lucide-react'
 import apiClient from '../api'
 import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 
@@ -24,6 +24,11 @@ interface Contact {
   member: { name: string }
 }
 
+interface Task {
+  id: number
+  status: string
+}
+
 const CONTACT_TYPE_LABEL: Record<string, string> = {
   visita: 'Visita',
   llamada: 'Llamada',
@@ -40,6 +45,7 @@ const QUICK_ACTIONS = [
   { to: '/members', label: 'Ver Miembros', icon: Users },
   { to: '/visits', label: 'Agendar', icon: CalendarPlus },
   { to: '/contacts', label: 'Registrar Contacto', icon: MessageSquarePlus },
+  { to: '/tasks', label: 'Nueva Tarea', icon: ListPlus },
   { to: '/suggestions', label: 'Sugerencias del Día', icon: Sparkles },
 ]
 
@@ -62,9 +68,15 @@ export default function Dashboard() {
     queryFn: async () => (await apiClient.get('/api/contacts')).data,
   })
 
+  const { data: tasks } = useQuery<Task[]>({
+    queryKey: ['tasks'],
+    queryFn: async () => (await apiClient.get('/api/tasks')).data,
+  })
+
   const totalMembers = members?.length ?? 0
   const visitasPendientes = visits?.filter((v) => v.status === 'pendiente').length ?? 0
   const visitasRealizadas = visits?.filter((v) => v.status === 'completada').length ?? 0
+  const tareasPendientes = tasks?.filter((t) => t.status === 'pendiente').length ?? 0
 
   const activities = [
     ...(contacts || []).map((c) => ({
@@ -100,6 +112,7 @@ export default function Dashboard() {
     { label: 'Miembros', value: totalMembers, icon: Users, color: 'text-primary bg-primary/10' },
     { label: 'Visitas pendientes', value: visitasPendientes, icon: Clock, color: 'text-warning bg-warning/15' },
     { label: 'Visitas realizadas', value: visitasRealizadas, icon: CheckCircle2, color: 'text-success bg-success/15' },
+    { label: 'Tareas pendientes', value: tareasPendientes, icon: ListChecks, color: 'text-accent bg-accent/15' },
   ]
 
   return (
@@ -125,7 +138,7 @@ export default function Dashboard() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, color }) => (
           <Card key={label} className="p-5">
             <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-full ${color}`}>

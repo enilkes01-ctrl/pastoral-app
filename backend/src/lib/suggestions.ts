@@ -64,7 +64,7 @@ export async function getOrGenerateSuggestionsForUser(
     include: { member: { include: { church: true } } },
   });
   if (existing.length > 0) {
-    return existing.map((s) => s.member);
+    return existing.map((s) => ({ ...s.member, sentAt: s.sentAt }));
   }
 
   const allChurches = await prisma.church.findMany();
@@ -101,5 +101,5 @@ export async function getOrGenerateSuggestionsForUser(
     where: { id: { in: ids } },
     include: { church: true },
   });
-  return members;
+  return members.map((m) => ({ ...m, sentAt: null as Date | null }));
 }

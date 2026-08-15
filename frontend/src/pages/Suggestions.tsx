@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Sparkles, CheckCircle2 } from 'lucide-react'
@@ -13,11 +12,11 @@ interface Suggestion {
   name: string
   phone: string | null
   church: string
+  sent: boolean
 }
 
 export default function Suggestions() {
   const queryClient = useQueryClient()
-  const [sentIds, setSentIds] = useState<Set<number>>(new Set())
 
   const { data: suggestions, isLoading } = useQuery<Suggestion[]>({
     queryKey: ['suggestions'],
@@ -25,15 +24,17 @@ export default function Suggestions() {
   })
 
   const markSent = useMutation({
-    mutationFn: async (memberId: number) =>
-      apiClient.post('/api/contacts', {
+    mutationFn: async (memberId: number) => {
+      await apiClient.post('/api/contacts', {
         memberId,
         type: 'mensaje',
         date: new Date().toISOString(),
         notes: 'Mensaje sugerido por la app',
-      }),
-    onSuccess: (_data, memberId) => {
-      setSentIds((prev) => new Set(prev).add(memberId))
+      })
+      await apiClient.put(`/api/suggestions/${memberId}/sent`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suggestions'] })
       queryClient.invalidateQueries({ queryKey: ['contacts'] })
       queryClient.invalidateQueries({ queryKey: ['members'] })
     },
@@ -86,7 +87,7 @@ export default function Suggestions() {
                       </div>
                       <div className="flex items-center gap-3">
                         <WhatsAppButton phone={s.phone} name={s.name} />
-                        {sentIds.has(s.id) ? (
+                        {s.sent ? (
                           <span className="flex items-center gap-1 text-sm text-success">
                             <CheckCircle2 className="h-3.5 w-3.5" /> Enviado
                           </span>

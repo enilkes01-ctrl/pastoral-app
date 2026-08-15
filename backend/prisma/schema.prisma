@@ -192,6 +192,7 @@ model MessageSuggestion {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   memberId  Int
   member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sentAt    DateTime? // cuándo se marcó "enviado" (null = todavía pendiente)
   createdAt DateTime @default(now())
 
   @@map("message_suggestions")

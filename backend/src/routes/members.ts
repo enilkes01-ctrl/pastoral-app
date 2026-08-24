@@ -93,6 +93,7 @@ router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
     ministries,
     responsibilities,
     interests,
+    characteristics,
     followUpLevel,
     nextAction,
   } = req.body;
@@ -116,6 +117,7 @@ router.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
       ministries,
       responsibilities,
       interests,
+      characteristics,
       followUpLevel,
       nextAction,
     },

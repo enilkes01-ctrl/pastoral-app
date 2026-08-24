@@ -97,6 +97,7 @@ interface MemberDetail {
   ministries: string | null
   responsibilities: string | null
   interests: string | null
+  characteristics: string | null
   followUpLevel: string
   nextAction: string | null
   church: { name: string }
@@ -339,6 +340,7 @@ export default function MemberProfile() {
       ministries: member.ministries || '',
       responsibilities: member.responsibilities || '',
       interests: member.interests || '',
+      characteristics: member.characteristics || '',
       followUpLevel: member.followUpLevel,
       nextAction: member.nextAction || '',
     })
@@ -572,6 +574,13 @@ export default function MemberProfile() {
                   className={`${inputClass} md:col-span-2`}
                 />
                 <textarea
+                  placeholder="Características (cualidades, aptitudes y actitudes espirituales)"
+                  value={profileForm.characteristics}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, characteristics: e.target.value }))}
+                  className={`${inputClass} md:col-span-2`}
+                  rows={3}
+                />
+                <textarea
                   placeholder="Próxima acción recomendada (ej. Llamar esta semana)"
                   value={profileForm.nextAction}
                   onChange={(e) => setProfileForm((f) => ({ ...f, nextAction: e.target.value }))}
@@ -617,6 +626,12 @@ export default function MemberProfile() {
             <InfoRow icon={HeartHandshake} label="Ministerios" value={member.ministries} />
             <InfoRow icon={Users} label="Responsabilidades" value={member.responsibilities} />
             <InfoRow icon={MapPin} label="Intereses" value={member.interests} />
+            {member.characteristics && (
+              <div className="sm:col-span-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-foreground">
+                <span className="font-medium">Características: </span>
+                {member.characteristics}
+              </div>
+            )}
             {member.nextAction && (
               <div className="sm:col-span-2 rounded-lg bg-accent/10 px-3 py-2 text-sm text-foreground">
                 <span className="font-medium">Próxima acción: </span>

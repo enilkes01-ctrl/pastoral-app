@@ -64,6 +64,7 @@ model Member {
   ministries       String?
   responsibilities String?
   interests        String?
+  characteristics  String?   // cualidades, aptitudes y actitudes espirituales, en texto libre
   followUpLevel    String    @default("normal") // normal, prioritario, urgente
   nextAction       String?
   churchId      Int

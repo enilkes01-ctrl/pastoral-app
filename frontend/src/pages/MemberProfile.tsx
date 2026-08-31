@@ -20,6 +20,7 @@ import {
   Home,
   CheckCircle2,
   ListChecks,
+  Heart,
 } from 'lucide-react'
 import apiClient from '../api'
 import { useStore } from '../store'
@@ -64,7 +65,7 @@ interface MemberLite {
 
 interface TimelineEntry {
   id: number
-  kind: 'contact' | 'visit' | 'task'
+  kind: 'contact' | 'visit' | 'task' | 'prayer'
   type: string
   date: string
   status?: string
@@ -79,6 +80,15 @@ interface TaskEntry {
   type: string
   description: string | null
   dueDate: string | null
+  status: string
+  createdAt: string
+  user: { firstName: string | null; lastName: string | null }
+}
+
+interface PrayerEntry {
+  id: number
+  description: string
+  scheduledAt: string | null
   status: string
   createdAt: string
   user: { firstName: string | null; lastName: string | null }
@@ -117,6 +127,7 @@ interface MemberDetail {
   }>
   tags: TagT[]
   tasks: TaskEntry[]
+  prayerRequests: PrayerEntry[]
   familyGroup: { members: MemberLite[] } | null
 }
 
@@ -145,11 +156,21 @@ const TASK_TYPE_LABEL: Record<string, string> = {
   orar: 'Orar',
   personalizada: 'Personalizada',
 }
-const STATUS_LABEL: Record<string, string> = { pendiente: 'Pendiente', completada: 'Completada', cancelada: 'Cancelada' }
-const STATUS_VARIANT: Record<string, 'warning' | 'success' | 'destructive'> = {
+const STATUS_LABEL: Record<string, string> = {
+  pendiente: 'Pendiente',
+  completada: 'Completada',
+  cancelada: 'Cancelada',
+  activo: 'Activo',
+  contestada: 'Contestada',
+  caducada: 'Caducada',
+}
+const STATUS_VARIANT: Record<string, 'warning' | 'success' | 'destructive' | 'primary' | 'neutral'> = {
   pendiente: 'warning',
   completada: 'success',
   cancelada: 'destructive',
+  activo: 'primary',
+  contestada: 'success',
+  caducada: 'neutral',
 }
 
 const inputClass =
@@ -375,6 +396,15 @@ export default function MemberProfile() {
       status: t.status,
       notes: t.description,
       user: t.user,
+    })),
+    ...member.prayerRequests.map((p) => ({
+      id: p.id,
+      kind: 'prayer' as const,
+      type: 'oracion',
+      date: p.scheduledAt || p.createdAt,
+      status: p.status,
+      notes: p.description,
+      user: p.user,
     })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
@@ -913,12 +943,19 @@ export default function MemberProfile() {
                 const Icon =
                   entry.kind === 'task'
                     ? ListChecks
-                    : entry.type === 'llamada'
-                      ? PhoneCall
-                      : entry.type === 'mensaje'
-                        ? MessageSquare
-                        : Users
-                const label = entry.kind === 'task' ? TASK_TYPE_LABEL[entry.type] || entry.type : TYPE_LABEL[entry.type] || entry.type
+                    : entry.kind === 'prayer'
+                      ? Heart
+                      : entry.type === 'llamada'
+                        ? PhoneCall
+                        : entry.type === 'mensaje'
+                          ? MessageSquare
+                          : Users
+                const label =
+                  entry.kind === 'task'
+                    ? TASK_TYPE_LABEL[entry.type] || entry.type
+                    : entry.kind === 'prayer'
+                      ? 'Oración'
+                      : TYPE_LABEL[entry.type] || entry.type
                 return (
                   <li key={`${entry.kind}-${entry.id}`} className="relative">
                     <span className="absolute -left-[21px] flex h-4 w-4 items-center justify-center rounded-full bg-primary">
@@ -926,7 +963,7 @@ export default function MemberProfile() {
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-medium text-foreground">{label}</span>
-                      {(entry.kind === 'visit' || entry.kind === 'task') && entry.status && (
+                      {(entry.kind === 'visit' || entry.kind === 'task' || entry.kind === 'prayer') && entry.status && (
                         <Badge variant={STATUS_VARIANT[entry.status]}>{STATUS_LABEL[entry.status]}</Badge>
                       )}
                       {entry.outcome && <Badge variant="accent">{OUTCOME_LABEL[entry.outcome] || entry.outcome}</Badge>}

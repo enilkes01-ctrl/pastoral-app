@@ -11,6 +11,7 @@ import Tasks from './pages/Tasks'
 import Templates from './pages/Templates'
 import Users from './pages/Users'
 import Account from './pages/Account'
+import Prayer from './pages/Prayer'
 import ProtectedRoute from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 
@@ -36,6 +37,7 @@ function App() {
               <Route path="/templates" element={<Templates />} />
               <Route path="/users" element={<Users />} />
               <Route path="/account" element={<Account />} />
+              <Route path="/prayer" element={<Prayer />} />
             </Route>
           </Route>
 

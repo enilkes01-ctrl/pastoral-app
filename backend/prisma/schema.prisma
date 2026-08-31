@@ -29,6 +29,7 @@ model User {
   sermons        PreachingSchedule[]
   suggestionsFor MessageSuggestion[]
   tasks          Task[]
+  prayerRequests PrayerRequest[]
 
   @@map("users")
 }
@@ -79,6 +80,7 @@ model Member {
   suggestions   MessageSuggestion[]
   tags          Tag[]     @relation("MemberTags")
   tasks         Task[]
+  prayerRequests PrayerRequest[]
   familyGroupId Int?
   familyGroup   FamilyGroup? @relation(fields: [familyGroupId], references: [id])
 
@@ -184,6 +186,21 @@ model Task {
   updatedAt      DateTime  @updatedAt
 
   @@map("tasks")
+}
+
+model PrayerRequest {
+  id          Int       @id @default(autoincrement())
+  memberId    Int
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  description String
+  scheduledAt DateTime? // fecha/hora opcional para orar
+  status      String    @default("activo") // activo, contestada, caducada
+  assignedTo  Int
+  user        User      @relation(fields: [assignedTo], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("prayer_requests")
 }
 
 model MessageSuggestion {

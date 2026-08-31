@@ -19,12 +19,21 @@ interface Preaching {
   location: string | null
 }
 
+interface PrayerRequest {
+  id: number
+  description: string
+  scheduledAt: string | null
+  status: string
+  member: { name: string }
+}
+
 interface Props {
   visits: Visit[]
   preachings: Preaching[]
+  prayerRequests: PrayerRequest[]
 }
 
-type EventType = 'visita' | 'llamada' | 'mensaje' | 'predicacion'
+type EventType = 'visita' | 'llamada' | 'mensaje' | 'predicacion' | 'oracion'
 
 interface CalEvent {
   id: string
@@ -41,6 +50,7 @@ const TYPE_LABEL: Record<EventType, string> = {
   llamada: 'Llamada',
   mensaje: 'Mensaje',
   predicacion: 'Predicación',
+  oracion: 'Oración',
 }
 
 const TYPE_DOT: Record<EventType, string> = {
@@ -48,24 +58,29 @@ const TYPE_DOT: Record<EventType, string> = {
   llamada: 'bg-accent',
   mensaje: 'bg-muted-foreground',
   predicacion: 'bg-success',
+  oracion: 'bg-warning',
 }
 
-const TYPE_BADGE: Record<EventType, 'primary' | 'accent' | 'neutral' | 'success'> = {
+const TYPE_BADGE: Record<EventType, 'primary' | 'accent' | 'neutral' | 'success' | 'warning'> = {
   visita: 'primary',
   llamada: 'accent',
   mensaje: 'neutral',
   predicacion: 'success',
+  oracion: 'warning',
 }
 
 const STATUS_LABEL: Record<string, string> = {
   pendiente: 'Pendiente',
   completada: 'Completada',
   cancelada: 'Cancelada',
+  activo: 'Activo',
+  contestada: 'Contestada',
+  caducada: 'Caducada',
 }
 
 const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
-export default function AgendaCalendar({ visits, preachings }: Props) {
+export default function AgendaCalendar({ visits, preachings, prayerRequests }: Props) {
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -90,6 +105,17 @@ export default function AgendaCalendar({ visits, preachings }: Props) {
       dayKey: new Date(p.date).toDateString(),
       time: new Date(p.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     })),
+    ...prayerRequests
+      .filter((p) => p.scheduledAt)
+      .map((p) => ({
+        id: `prayer-${p.id}`,
+        label: p.member?.name,
+        detail: p.description,
+        type: 'oracion' as const,
+        status: p.status,
+        dayKey: new Date(p.scheduledAt as string).toDateString(),
+        time: new Date(p.scheduledAt as string).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      })),
   ]
 
   const year = monthCursor.getFullYear()

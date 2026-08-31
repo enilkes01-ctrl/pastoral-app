@@ -53,6 +53,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res) => {
       visits: { orderBy: { scheduledDate: 'desc' }, take: 15, include: { user: { select: { firstName: true, lastName: true } } } },
       tags: true,
       tasks: { orderBy: { createdAt: 'desc' }, take: 15, include: { user: { select: { firstName: true, lastName: true } } } },
+      prayerRequests: { orderBy: { createdAt: 'desc' }, take: 15, include: { user: { select: { firstName: true, lastName: true } } } },
       familyGroup: { include: { members: { select: { id: true, name: true, phone: true, churchId: true } } } },
     },
   });

@@ -29,6 +29,12 @@ export default function Agenda() {
     enabled: tab === 'calendario' || tab === 'predicacion',
   })
 
+  const { data: prayerRequests } = useQuery({
+    queryKey: ['prayer-requests'],
+    queryFn: async () => (await apiClient.get('/api/prayer-requests')).data,
+    enabled: tab === 'calendario',
+  })
+
   return (
     <div className="space-y-6">
       <div className="flex gap-1 border-b border-border">
@@ -49,7 +55,9 @@ export default function Agenda() {
       </div>
 
       {tab === 'lista' && <Visits />}
-      {tab === 'calendario' && <AgendaCalendar visits={visits || []} preachings={preachings || []} />}
+      {tab === 'calendario' && (
+        <AgendaCalendar visits={visits || []} preachings={preachings || []} prayerRequests={prayerRequests || []} />
+      )}
       {tab === 'predicacion' && <Preaching />}
     </div>
   )

@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Home, Users, CalendarDays, MessageSquare, Sparkles, ListChecks, Moon, Sun, LogOut, HeartHandshake, KeyRound, UserCog } from 'lucide-react'
+import { Home, Users, CalendarDays, MessageSquare, Sparkles, ListChecks, Heart, Moon, Sun, LogOut, HeartHandshake, KeyRound, UserCog } from 'lucide-react'
 import { useStore } from '../../store'
 import { cn } from '../../lib/utils'
 import GlobalSearch from '../GlobalSearch'
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: '/visits', label: 'Agenda', icon: CalendarDays },
   { to: '/contacts', label: 'Contactos', icon: MessageSquare },
   { to: '/tasks', label: 'Tareas', icon: ListChecks },
+  { to: '/prayer', label: 'Oración', icon: Heart },
   { to: '/suggestions', label: 'Sugerencias', icon: Sparkles },
 ]
 

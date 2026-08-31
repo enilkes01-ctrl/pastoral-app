@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, Clock, ListChecks, Church } from 'lucide-react'
+import { Bell, Clock, ListChecks, Church, Heart } from 'lucide-react'
 import apiClient from '../api'
 import Badge from './ui/Badge'
 
@@ -26,6 +26,14 @@ interface Preaching {
   date: string
 }
 
+interface PrayerRequest {
+  id: number
+  status: string
+  scheduledAt: string | null
+  description: string
+  member: { name: string }
+}
+
 export default function NotificationBell() {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -42,6 +50,10 @@ export default function NotificationBell() {
     queryKey: ['preaching'],
     queryFn: async () => (await apiClient.get('/api/preaching')).data,
   })
+  const { data: prayerRequests } = useQuery<PrayerRequest[]>({
+    queryKey: ['prayer-requests'],
+    queryFn: async () => (await apiClient.get('/api/prayer-requests')).data,
+  })
 
   const now = new Date()
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
@@ -55,8 +67,11 @@ export default function NotificationBell() {
     const d = new Date(p.date)
     return d >= now && d <= endOfTomorrow
   })
+  const dueSoonPrayers = (prayerRequests || []).filter(
+    (p) => p.status === 'activo' && p.scheduledAt && new Date(p.scheduledAt) <= endOfTomorrow
+  )
 
-  const total = overdueVisits.length + dueSoonTasks.length + upcomingPreachings.length
+  const total = overdueVisits.length + dueSoonTasks.length + upcomingPreachings.length + dueSoonPrayers.length
 
   const goTo = (path: string) => {
     navigate(path)
@@ -141,6 +156,26 @@ export default function NotificationBell() {
                       <span className="font-medium text-foreground">{p.title}</span>{' '}
                       <span className="text-xs text-muted-foreground">
                         · {new Date(p.date).toLocaleDateString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {dueSoonPrayers.length > 0 && (
+                <div>
+                  <p className="mb-1 flex items-center gap-1 px-2 text-xs font-semibold text-muted-foreground">
+                    <Heart className="h-3.5 w-3.5" /> Oración
+                  </p>
+                  {dueSoonPrayers.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => goTo('/prayer')}
+                      className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-primary/5"
+                    >
+                      <span className="font-medium text-foreground">{p.member?.name}</span>{' '}
+                      <span className="text-xs text-muted-foreground">
+                        · {p.scheduledAt ? new Date(p.scheduledAt).toLocaleDateString() : ''}
                       </span>
                     </button>
                   ))}

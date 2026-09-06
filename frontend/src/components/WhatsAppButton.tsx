@@ -28,6 +28,7 @@ interface Props {
 
 export default function WhatsAppButton({ phone, name }: Props) {
   const [open, setOpen] = useState(false)
+  const [customMessage, setCustomMessage] = useState('')
 
   const { data: templates } = useQuery<Template[]>({
     queryKey: ['templates'],
@@ -43,6 +44,7 @@ export default function WhatsAppButton({ phone, name }: Props) {
     const url = `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ''}`
     window.open(url, '_blank', 'noreferrer')
     setOpen(false)
+    setCustomMessage('')
   }
 
   return (
@@ -56,7 +58,25 @@ export default function WhatsAppButton({ phone, name }: Props) {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-10 mt-1 w-64 rounded-lg border border-border bg-card p-2 shadow-md">
+        <div className="absolute right-0 z-10 mt-1 w-72 rounded-lg border border-border bg-card p-2 shadow-md">
+          <div className="mb-1 space-y-1.5">
+            <textarea
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Pega aquí un mensaje personalizado..."
+              rows={3}
+              className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <button
+              type="button"
+              disabled={!customMessage.trim()}
+              onClick={() => send(customMessage)}
+              className="block w-full rounded bg-success/10 px-2 py-1.5 text-left text-sm font-medium text-success hover:bg-success/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Enviar mensaje personalizado
+            </button>
+          </div>
+          <div className="mb-1 border-t border-border pt-1" />
           {templates && templates.length > 0 ? (
             <div className="max-h-56 space-y-1 overflow-y-auto">
               {templates.map((t) => (
